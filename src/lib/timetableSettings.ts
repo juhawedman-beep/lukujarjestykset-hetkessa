@@ -1,23 +1,26 @@
+export interface SpecialBreak {
+  afterPeriod: number;
+  duration: number; // minutes
+  label: string;    // e.g. "Pitkä välitunti", "Ruokatauko"
+}
+
 export interface TimetableSettings {
-  lessonDuration: number;   // minutes (e.g. 45)
-  breakDuration: number;    // minutes (e.g. 10)
-  longBreakDuration: number; // minutes (e.g. 20), after period 3
-  longBreakAfterPeriod: number; // e.g. 3
-  lunchBreakDuration: number; // minutes (e.g. 25)
-  lunchBreakAfterPeriod: number; // e.g. 5
-  startTime: string;        // "08:00"
-  periodsPerDay: number;    // e.g. 8
+  lessonDuration: number;
+  breakDuration: number;
+  startTime: string;
+  periodsPerDay: number;
+  specialBreaks: SpecialBreak[];
 }
 
 export const DEFAULT_SETTINGS: TimetableSettings = {
   lessonDuration: 45,
   breakDuration: 10,
-  longBreakDuration: 20,
-  longBreakAfterPeriod: 3,
-  lunchBreakDuration: 25,
-  lunchBreakAfterPeriod: 5,
   startTime: '08:00',
   periodsPerDay: 8,
+  specialBreaks: [
+    { afterPeriod: 3, duration: 20, label: 'Pitkä välitunti' },
+    { afterPeriod: 5, duration: 25, label: 'Ruokatauko' },
+  ],
 };
 
 import type { TimeSlot } from '@/types/timetable';
@@ -26,6 +29,12 @@ export function generateTimeSlots(settings: TimetableSettings): TimeSlot[] {
   const slots: TimeSlot[] = [];
   const [startH, startM] = settings.startTime.split(':').map(Number);
   let currentMinutes = startH * 60 + startM;
+
+  // Index special breaks by afterPeriod for quick lookup
+  const specialMap = new Map<number, SpecialBreak>();
+  for (const sb of settings.specialBreaks) {
+    specialMap.set(sb.afterPeriod, sb);
+  }
 
   for (let p = 1; p <= settings.periodsPerDay; p++) {
     const startMin = currentMinutes;
@@ -38,10 +47,9 @@ export function generateTimeSlots(settings: TimetableSettings): TimeSlot[] {
 
     currentMinutes = endMin;
     if (p < settings.periodsPerDay) {
-      if (p === settings.lunchBreakAfterPeriod) {
-        currentMinutes += settings.lunchBreakDuration;
-      } else if (p === settings.longBreakAfterPeriod) {
-        currentMinutes += settings.longBreakDuration;
+      const special = specialMap.get(p);
+      if (special) {
+        currentMinutes += special.duration;
       } else {
         currentMinutes += settings.breakDuration;
       }
