@@ -15,6 +15,7 @@ import RoomManagementDialog from '@/components/RoomManagementDialog';
 import RoomView from '@/components/RoomView';
 import WorkloadAnalysis from '@/components/WorkloadAnalysis';
 import PrintTimetable, { triggerPrint } from '@/components/PrintTimetable';
+import GeneratorDialog from '@/components/GeneratorDialog';
 import { GraduationCap, Calendar, User, Users, AlertTriangle, Printer, DoorOpen, BarChart3, Undo2, Redo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
