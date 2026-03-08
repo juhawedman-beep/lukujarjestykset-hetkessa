@@ -254,6 +254,17 @@ export default function Index() {
           </div>
         )}
       </main>
+
+      {editingEntry && (
+        <AdditionalTeachersDialog
+          entry={editingEntry}
+          teachers={teachers}
+          allEntries={entries}
+          open={!!editingEntry}
+          onClose={() => setEditingEntryId(null)}
+          onSave={handleSaveAdditionalTeachers}
+        />
+      )}
     </div>
   );
 }
