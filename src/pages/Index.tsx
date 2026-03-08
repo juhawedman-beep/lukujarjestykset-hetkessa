@@ -119,6 +119,19 @@ export default function Index() {
     });
   }, [pushUndo]);
 
+  // Additional teachers dialog state
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+
+  const editingEntry = useMemo(
+    () => editingEntryId ? entries.find(e => e.id === editingEntryId) : null,
+    [entries, editingEntryId]
+  );
+
+  const handleSaveAdditionalTeachers = useCallback((entryId: string, additionalTeachers: AdditionalTeacher[]) => {
+    pushUndo(entries);
+    setEntries(prev => prev.map(e => e.id === entryId ? { ...e, additionalTeachers } : e));
+  }, [entries, pushUndo]);
+
   const handlePrint = useCallback(() => {
     setIsPrinting(true);
     setTimeout(() => {
