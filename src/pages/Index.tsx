@@ -15,6 +15,7 @@ import RoomManagementDialog from '@/components/RoomManagementDialog';
 import RoomView from '@/components/RoomView';
 import WorkloadAnalysis from '@/components/WorkloadAnalysis';
 import PrintTimetable, { triggerPrint } from '@/components/PrintTimetable';
+import GeneratorDialog from '@/components/GeneratorDialog';
 import { GraduationCap, Calendar, User, Users, AlertTriangle, Printer, DoorOpen, BarChart3, Undo2, Redo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
@@ -142,6 +143,11 @@ export default function Index() {
     }, 100);
   }, []);
 
+  const handleGenerated = useCallback((newEntries: TimetableEntry[]) => {
+    pushUndo(entries);
+    setEntries(newEntries);
+  }, [entries, pushUndo]);
+
   const printEntityId = viewMode === 'teacher' ? (selectedTeacherId ?? '') : '';
   const printEntityName = viewMode === 'teacher' ? title : '';
 
@@ -200,6 +206,14 @@ export default function Index() {
                 <span className="hidden sm:inline">Tulosta</span>
               </Button>
             )}
+            <GeneratorDialog
+              classes={schoolClasses}
+              teachers={teachers}
+              subjects={subjects}
+              rooms={rooms}
+              periodsPerDay={settings.periodsPerDay}
+              onGenerated={handleGenerated}
+            />
             <RoomManagementDialog rooms={rooms} onSave={setRooms} />
             <SettingsDialog settings={settings} onSave={setSettings} />
             <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
