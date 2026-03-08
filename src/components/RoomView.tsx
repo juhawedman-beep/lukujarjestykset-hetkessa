@@ -176,35 +176,40 @@ export default function RoomView({ entries, subjects, classes, rooms, timeSlots,
                     );
                   }
 
+                  const isMultiUse = cellEntries.length > 1 && !hasConflict;
+
                   return (
                     <td key={day} className="p-1.5 border-b border-border">
                       <div
-                        className={`h-16 rounded-md border p-2 flex flex-col justify-between ${
+                        className={`min-h-16 rounded-md border p-1.5 flex flex-col gap-0.5 ${
                           hasConflict
                             ? 'bg-destructive/10 border-destructive/40'
+                            : isMultiUse
+                            ? 'bg-accent/20 border-accent/40'
                             : 'bg-primary/10 border-primary/30'
                         }`}
                         role="gridcell"
-                        aria-label={hasConflict ? `Konflikti: ${cellEntries.length} varausta` : `Varattu: ${classMap.get(cellEntries[0].classId)?.name}`}
+                        aria-label={
+                          hasConflict
+                            ? `Konflikti: ${cellEntries.length} varausta (max ${maxConcurrent})`
+                            : cellEntries.map(e => classMap.get(e.classId)?.name).join(' + ')
+                        }
                       >
                         {hasConflict ? (
                           <div className="flex items-center justify-center h-full">
-                            <span className="text-xs font-medium text-destructive">⚠ {cellEntries.length} ryhmää!</span>
+                            <span className="text-xs font-medium text-destructive">⚠ {cellEntries.length} ryhmää (max {maxConcurrent})!</span>
                           </div>
                         ) : (
-                          <>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-semibold text-foreground">
-                                {classMap.get(cellEntries[0].classId)?.name}
+                          cellEntries.map((entry, idx) => (
+                            <div key={entry.id} className={`flex items-center justify-between ${idx > 0 ? 'border-t border-border/50 pt-0.5' : ''}`}>
+                              <span className="text-xs font-semibold text-foreground">
+                                {classMap.get(entry.classId)?.name}
                               </span>
-                              <span className="text-xs text-muted-foreground">
-                                {subjectMap.get(cellEntries[0].subjectId)?.abbreviation}
+                              <span className="text-[10px] text-muted-foreground">
+                                {subjectMap.get(entry.subjectId)?.abbreviation} · {teacherMap.get(entry.teacherId)?.lastName}
                               </span>
                             </div>
-                            <div className="text-xs text-muted-foreground truncate">
-                              {teacherMap.get(cellEntries[0].teacherId)?.lastName}
-                            </div>
-                          </>
+                          ))
                         )}
                       </div>
                     </td>
