@@ -230,7 +230,7 @@ export default function Index() {
         {viewMode === 'class' && (
           <div className="space-y-6" role="tabpanel" aria-label="Luokkien lukujärjestykset">
             <SubjectLegend />
-            <ClassView entries={filteredEntries} subjects={subjects} classes={schoolClasses} rooms={rooms} timeSlots={timeSlots} teachers={teachers} onMoveEntry={handleMoveEntry} />
+            <ClassView entries={filteredEntries} subjects={subjects} classes={schoolClasses} rooms={rooms} timeSlots={timeSlots} teachers={teachers} onMoveEntry={handleMoveEntry} onEntryClick={setEditingEntryId} />
           </div>
         )}
 
