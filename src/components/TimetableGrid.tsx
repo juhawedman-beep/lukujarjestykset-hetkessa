@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
-import type { TimetableEntry, Subject, SchoolClass, Room, TimeSlot, SubjectCategory } from '@/types/timetable';
-import { DAYS_FI } from '@/types/timetable';
+import type { TimetableEntry, Subject, SchoolClass, Room, TimeSlot, Teacher, SubjectCategory } from '@/types/timetable';
+import { DAYS_FI, ROLE_LABELS_FI } from '@/types/timetable';
+import { Users } from 'lucide-react';
 
 interface TimetableGridProps {
   entries: TimetableEntry[];
@@ -9,6 +10,8 @@ interface TimetableGridProps {
   rooms: Room[];
   timeSlots: TimeSlot[];
   title: string;
+  teachers?: Teacher[];
+  onEntryClick?: (entryId: string) => void;
 }
 
 const categoryColorMap: Record<SubjectCategory, string> = {
@@ -21,10 +24,11 @@ const categoryColorMap: Record<SubjectCategory, string> = {
   free: 'bg-subject-free/15 text-muted-foreground border-subject-free/30',
 };
 
-export default function TimetableGrid({ entries, subjects, classes, rooms, timeSlots, title }: TimetableGridProps) {
+export default function TimetableGrid({ entries, subjects, classes, rooms, timeSlots, title, teachers, onEntryClick }: TimetableGridProps) {
   const subjectMap = useMemo(() => new Map(subjects.map(s => [s.id, s])), [subjects]);
   const classMap = useMemo(() => new Map(classes.map(c => [c.id, c])), [classes]);
   const roomMap = useMemo(() => new Map(rooms.map(r => [r.id, r])), [rooms]);
+  const teacherMap = useMemo(() => teachers ? new Map(teachers.map(t => [t.id, t])) : null, [teachers]);
 
   const grid = useMemo(() => {
     const map = new Map<string, TimetableEntry>();
@@ -69,15 +73,31 @@ export default function TimetableGrid({ entries, subjects, classes, rooms, timeS
                   const cls = classMap.get(entry.classId);
                   const room = roomMap.get(entry.roomId);
                   const colorClasses = subject ? categoryColorMap[subject.category] : categoryColorMap.free;
+                  const hasAdditional = (entry.additionalTeachers?.length ?? 0) > 0;
 
                   return (
                     <td key={day} className="p-1.5 border-b border-border">
-                      <div className={`h-16 rounded-md border p-2 flex flex-col justify-between transition-all hover:scale-[1.02] hover:shadow-md cursor-default ${colorClasses}`}>
+                      <div
+                        className={`h-16 rounded-md border p-2 flex flex-col justify-between transition-all hover:scale-[1.02] hover:shadow-md ${onEntryClick ? 'cursor-pointer' : 'cursor-default'} ${colorClasses}`}
+                        onClick={() => onEntryClick?.(entry.id)}
+                        role={onEntryClick ? 'button' : undefined}
+                        tabIndex={onEntryClick ? 0 : undefined}
+                      >
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-semibold">{subject?.abbreviation}</span>
-                          <span className="text-xs font-medium opacity-80">{cls?.name}</span>
+                          <div className="flex items-center gap-1">
+                            {hasAdditional && <Users className="w-3 h-3 opacity-60" />}
+                            <span className="text-xs font-medium opacity-80">{cls?.name}</span>
+                          </div>
                         </div>
-                        <div className="text-xs opacity-70 truncate">{room?.name}</div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs opacity-70 truncate">{room?.name}</span>
+                          {hasAdditional && (
+                            <span className="text-[10px] opacity-60">
+                              +{entry.additionalTeachers!.length}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
                   );

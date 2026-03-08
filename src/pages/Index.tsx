@@ -2,7 +2,8 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { teachers, subjects, schoolClasses, rooms, timetableEntries as initialEntries } from '@/data/demoData';
 import { DEFAULT_SETTINGS, generateTimeSlots } from '@/lib/timetableSettings';
 import type { TimetableSettings } from '@/lib/timetableSettings';
-import type { TimetableEntry } from '@/types/timetable';
+import type { TimetableEntry, AdditionalTeacher } from '@/types/timetable';
+import AdditionalTeachersDialog from '@/components/AdditionalTeachersDialog';
 import TimetableGrid from '@/components/TimetableGrid';
 import TeacherSelector from '@/components/TeacherSelector';
 import StatsBar from '@/components/StatsBar';
@@ -118,6 +119,19 @@ export default function Index() {
     });
   }, [pushUndo]);
 
+  // Additional teachers dialog state
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+
+  const editingEntry = useMemo(
+    () => editingEntryId ? entries.find(e => e.id === editingEntryId) : null,
+    [entries, editingEntryId]
+  );
+
+  const handleSaveAdditionalTeachers = useCallback((entryId: string, additionalTeachers: AdditionalTeacher[]) => {
+    pushUndo(entries);
+    setEntries(prev => prev.map(e => e.id === entryId ? { ...e, additionalTeachers } : e));
+  }, [entries, pushUndo]);
+
   const handlePrint = useCallback(() => {
     setIsPrinting(true);
     setTimeout(() => {
@@ -206,7 +220,7 @@ export default function Index() {
                 <>
                   <StatsBar entries={teacherEntries} subjects={subjects} />
                   <SubjectLegend />
-                  <TimetableGrid entries={teacherEntries} subjects={subjects} classes={schoolClasses} rooms={rooms} timeSlots={timeSlots} title={title} />
+                  <TimetableGrid entries={teacherEntries} subjects={subjects} classes={schoolClasses} rooms={rooms} timeSlots={timeSlots} title={title} teachers={teachers} onEntryClick={setEditingEntryId} />
                 </>
               )}
             </div>
@@ -216,7 +230,7 @@ export default function Index() {
         {viewMode === 'class' && (
           <div className="space-y-6" role="tabpanel" aria-label="Luokkien lukujärjestykset">
             <SubjectLegend />
-            <ClassView entries={filteredEntries} subjects={subjects} classes={schoolClasses} rooms={rooms} timeSlots={timeSlots} teachers={teachers} onMoveEntry={handleMoveEntry} />
+            <ClassView entries={filteredEntries} subjects={subjects} classes={schoolClasses} rooms={rooms} timeSlots={timeSlots} teachers={teachers} onMoveEntry={handleMoveEntry} onEntryClick={setEditingEntryId} />
           </div>
         )}
 
@@ -240,6 +254,17 @@ export default function Index() {
           </div>
         )}
       </main>
+
+      {editingEntry && (
+        <AdditionalTeachersDialog
+          entry={editingEntry}
+          teachers={teachers}
+          allEntries={entries}
+          open={!!editingEntry}
+          onClose={() => setEditingEntryId(null)}
+          onSave={handleSaveAdditionalTeachers}
+        />
+      )}
     </div>
   );
 }
