@@ -220,7 +220,7 @@ export default function Index() {
                 <>
                   <StatsBar entries={teacherEntries} subjects={subjects} />
                   <SubjectLegend />
-                  <TimetableGrid entries={teacherEntries} subjects={subjects} classes={schoolClasses} rooms={rooms} timeSlots={timeSlots} title={title} />
+                  <TimetableGrid entries={teacherEntries} subjects={subjects} classes={schoolClasses} rooms={rooms} timeSlots={timeSlots} title={title} teachers={teachers} onEntryClick={setEditingEntryId} />
                 </>
               )}
             </div>
