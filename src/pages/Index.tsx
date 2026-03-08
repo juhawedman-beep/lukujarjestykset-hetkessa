@@ -143,6 +143,11 @@ export default function Index() {
     }, 100);
   }, []);
 
+  const handleGenerated = useCallback((newEntries: TimetableEntry[]) => {
+    pushUndo(entries);
+    setEntries(newEntries);
+  }, [entries, pushUndo]);
+
   const printEntityId = viewMode === 'teacher' ? (selectedTeacherId ?? '') : '';
   const printEntityName = viewMode === 'teacher' ? title : '';
 
