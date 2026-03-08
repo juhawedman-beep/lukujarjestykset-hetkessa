@@ -2,7 +2,7 @@ import { useMemo, useState, useCallback } from 'react';
 import type { TimetableEntry, Subject, SchoolClass, Room, TimeSlot, Teacher } from '@/types/timetable';
 import { DAYS_FI, DAYS_FULL_FI } from '@/types/timetable';
 import { validateTimetable } from '@/lib/timetableValidation';
-import { AlertTriangle, XCircle, ChevronDown, ChevronUp, Lightbulb, GripVertical } from 'lucide-react';
+import { AlertTriangle, XCircle, ChevronDown, ChevronUp, Lightbulb, GripVertical, Users } from 'lucide-react';
 
 interface ClassViewProps {
   entries: TimetableEntry[];
@@ -12,6 +12,7 @@ interface ClassViewProps {
   timeSlots: TimeSlot[];
   teachers: Teacher[];
   onMoveEntry?: (entryId: string, newDay: number, newPeriod: number) => void;
+  onEntryClick?: (entryId: string) => void;
 }
 
 const categoryColorMap: Record<string, string> = {
