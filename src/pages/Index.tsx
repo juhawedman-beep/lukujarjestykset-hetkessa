@@ -33,6 +33,50 @@ export default function Index() {
   const [viewMode, setViewMode] = useState<ViewMode>('teacher');
   const [entries, setEntries] = useState<TimetableEntry[]>(initialEntries);
   const [isPrinting, setIsPrinting] = useState(false);
+  const undoStack = useRef<TimetableEntry[][]>([]);
+  const redoStack = useRef<TimetableEntry[][]>([]);
+
+  const pushUndo = useCallback((snapshot: TimetableEntry[]) => {
+    undoStack.current = [...undoStack.current, snapshot];
+    redoStack.current = [];
+  }, []);
+
+  const handleUndo = useCallback(() => {
+    if (undoStack.current.length === 0) return;
+    const prev = undoStack.current[undoStack.current.length - 1];
+    undoStack.current = undoStack.current.slice(0, -1);
+    setEntries(current => {
+      redoStack.current = [...redoStack.current, current];
+      return prev;
+    });
+    toast({ title: 'Kumottu', description: 'Edellinen muutos peruttu.' });
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    if (redoStack.current.length === 0) return;
+    const next = redoStack.current[redoStack.current.length - 1];
+    redoStack.current = redoStack.current.slice(0, -1);
+    setEntries(current => {
+      undoStack.current = [...undoStack.current, current];
+      return next;
+    });
+    toast({ title: 'Palautettu', description: 'Muutos palautettu.' });
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleUndo, handleRedo]);
 
   const timeSlots = useMemo(() => generateTimeSlots(settings), [settings]);
 
