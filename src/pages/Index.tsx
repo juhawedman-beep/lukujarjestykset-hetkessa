@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { teachers, subjects, schoolClasses, rooms, timetableEntries as initialEntries } from '@/data/demoData';
 import { DEFAULT_SETTINGS, generateTimeSlots } from '@/lib/timetableSettings';
 import type { TimetableSettings } from '@/lib/timetableSettings';
@@ -13,8 +13,9 @@ import ConflictsPanel from '@/components/ConflictsPanel';
 import RoomView from '@/components/RoomView';
 import WorkloadAnalysis from '@/components/WorkloadAnalysis';
 import PrintTimetable, { triggerPrint } from '@/components/PrintTimetable';
-import { GraduationCap, Calendar, User, Users, AlertTriangle, Printer, DoorOpen, BarChart3 } from 'lucide-react';
+import { GraduationCap, Calendar, User, Users, AlertTriangle, Printer, DoorOpen, BarChart3, Undo2, Redo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/hooks/use-toast';
 
 type ViewMode = 'teacher' | 'class' | 'rooms' | 'workload' | 'conflicts';
 
@@ -32,6 +33,50 @@ export default function Index() {
   const [viewMode, setViewMode] = useState<ViewMode>('teacher');
   const [entries, setEntries] = useState<TimetableEntry[]>(initialEntries);
   const [isPrinting, setIsPrinting] = useState(false);
+  const undoStack = useRef<TimetableEntry[][]>([]);
+  const redoStack = useRef<TimetableEntry[][]>([]);
+
+  const pushUndo = useCallback((snapshot: TimetableEntry[]) => {
+    undoStack.current = [...undoStack.current, snapshot];
+    redoStack.current = [];
+  }, []);
+
+  const handleUndo = useCallback(() => {
+    if (undoStack.current.length === 0) return;
+    const prev = undoStack.current[undoStack.current.length - 1];
+    undoStack.current = undoStack.current.slice(0, -1);
+    setEntries(current => {
+      redoStack.current = [...redoStack.current, current];
+      return prev;
+    });
+    toast({ title: 'Kumottu', description: 'Edellinen muutos peruttu.' });
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    if (redoStack.current.length === 0) return;
+    const next = redoStack.current[redoStack.current.length - 1];
+    redoStack.current = redoStack.current.slice(0, -1);
+    setEntries(current => {
+      undoStack.current = [...undoStack.current, current];
+      return next;
+    });
+    toast({ title: 'Palautettu', description: 'Muutos palautettu.' });
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleUndo, handleRedo]);
 
   const timeSlots = useMemo(() => generateTimeSlots(settings), [settings]);
 
@@ -58,6 +103,7 @@ export default function Index() {
     setEntries(prev => {
       const entry = prev.find(e => e.id === entryId);
       if (!entry) return prev;
+      pushUndo(prev);
       const targetEntry = prev.find(
         e => e.classId === entry.classId && e.dayOfWeek === newDay && e.period === newPeriod
       );
@@ -70,7 +116,7 @@ export default function Index() {
       }
       return prev.map(e => e.id === entryId ? { ...e, dayOfWeek: newDay, period: newPeriod } : e);
     });
-  }, []);
+  }, [pushUndo]);
 
   const handlePrint = useCallback(() => {
     setIsPrinting(true);
@@ -126,6 +172,12 @@ export default function Index() {
           </nav>
 
           <div className="ml-auto flex items-center gap-2 shrink-0">
+            <Button variant="ghost" size="sm" onClick={handleUndo} aria-label="Kumoa (Ctrl+Z)" title="Kumoa (Ctrl+Z)">
+              <Undo2 className="w-4 h-4" aria-hidden="true" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleRedo} aria-label="Tee uudelleen (Ctrl+Y)" title="Tee uudelleen (Ctrl+Y)">
+              <Redo2 className="w-4 h-4" aria-hidden="true" />
+            </Button>
             {viewMode === 'teacher' && selectedTeacher && (
               <Button variant="outline" size="sm" className="gap-1.5" onClick={handlePrint} aria-label="Tulosta lukujärjestys">
                 <Printer className="w-3.5 h-3.5" aria-hidden="true" />
