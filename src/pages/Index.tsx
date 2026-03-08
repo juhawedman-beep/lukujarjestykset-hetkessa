@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { teachers, subjects, schoolClasses, rooms, timetableEntries as initialEntries } from '@/data/demoData';
 import { DEFAULT_SETTINGS, generateTimeSlots } from '@/lib/timetableSettings';
 import type { TimetableSettings } from '@/lib/timetableSettings';
