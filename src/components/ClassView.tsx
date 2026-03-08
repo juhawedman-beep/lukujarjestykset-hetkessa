@@ -2,7 +2,18 @@ import { useMemo, useState, useCallback } from 'react';
 import type { TimetableEntry, Subject, SchoolClass, Room, TimeSlot, Teacher } from '@/types/timetable';
 import { DAYS_FI, DAYS_FULL_FI } from '@/types/timetable';
 import { validateTimetable } from '@/lib/timetableValidation';
-import { AlertTriangle, XCircle, ChevronDown, ChevronUp, Lightbulb, GripVertical, Users } from 'lucide-react';
+import { AlertTriangle, XCircle, ChevronDown, ChevronUp, Lightbulb, GripVertical, Users, Wand2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 
 interface ClassViewProps {
   entries: TimetableEntry[];
