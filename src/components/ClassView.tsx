@@ -41,6 +41,7 @@ export default function ClassView({ entries, subjects, classes, rooms, timeSlots
   const [expandedWarnings, setExpandedWarnings] = useState<Set<number>>(new Set());
   const [draggedEntry, setDraggedEntry] = useState<string | null>(null);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
+  const [gapRemovalTarget, setGapRemovalTarget] = useState<{ classId: string; day: number } | null>(null);
 
   const subjectMap = useMemo(() => new Map(subjects.map(s => [s.id, s])), [subjects]);
   const roomMap = useMemo(() => new Map(rooms.map(r => [r.id, r])), [rooms]);
