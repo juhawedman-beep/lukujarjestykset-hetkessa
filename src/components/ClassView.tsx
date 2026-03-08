@@ -246,12 +246,56 @@ export default function ClassView({ entries, subjects, classes, rooms, timeSlots
                       <span><span className="font-semibold">Optimointiehdotus:</span> {w.suggestion}</span>
                     </div>
                   )}
+                  {w.dayOfWeek && w.message.includes('hyppytunti') && onMoveEntry && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-2 text-xs gap-1.5"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setGapRemovalTarget({ classId: w.classId, day: w.dayOfWeek! });
+                      }}
+                    >
+                      <Wand2 className="w-3.5 h-3.5" />
+                      Poista hyppytunnit – hyväksy tiivistys
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
           ))}
         </div>
       )}
+
+      {/* Gap removal confirmation dialog */}
+      <AlertDialog open={!!gapRemovalTarget} onOpenChange={(open) => !open && setGapRemovalTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hyväksy hyppytuntien poisto</AlertDialogTitle>
+            <AlertDialogDescription>
+              {gapRemovalTarget && (() => {
+                const cls = classes.find(c => c.id === gapRemovalTarget.classId);
+                const dayName = DAYS_FULL_FI[gapRemovalTarget.day - 1]?.toLowerCase();
+                const moves = computeGapRemovalMoves(gapRemovalTarget.classId, gapRemovalTarget.day);
+                return (
+                  <>
+                    Luokan <strong>{cls?.name}</strong> {dayName}n oppitunnit tiivistetään
+                    niin, että hyppytunnit poistuvat. Yhteensä {moves.length} oppituntia siirretään.
+                    <br /><br />
+                    Tämä toiminto muuttaa lukujärjestystä. Haluatko jatkaa?
+                  </>
+                );
+              })()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Peruuta</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmGapRemoval}>
+              Hyväksy ja tiivistä
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {classWarnings.length === 0 && selectedClass && (
         <div className="rounded-lg border border-subject-sports/30 bg-subject-sports/5 p-3 flex items-center gap-2" role="status">
