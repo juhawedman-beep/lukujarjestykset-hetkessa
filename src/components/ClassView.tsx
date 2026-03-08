@@ -132,6 +132,33 @@ export default function ClassView({ entries, subjects, classes, rooms, timeSlots
 
   const selectedClass = classes.find(c => c.id === selectedClassId);
 
+  // Compute gap removal moves for a given class + day
+  const computeGapRemovalMoves = useCallback((classId: string, day: number): { entryId: string; newPeriod: number }[] => {
+    const dayEntries = entries
+      .filter(e => e.classId === classId && e.dayOfWeek === day)
+      .sort((a, b) => a.period - b.period);
+    if (dayEntries.length === 0) return [];
+
+    const firstPeriod = dayEntries[0].period;
+    const moves: { entryId: string; newPeriod: number }[] = [];
+    dayEntries.forEach((entry, i) => {
+      const targetPeriod = firstPeriod + i;
+      if (entry.period !== targetPeriod) {
+        moves.push({ entryId: entry.id, newPeriod: targetPeriod });
+      }
+    });
+    return moves;
+  }, [entries]);
+
+  const handleConfirmGapRemoval = useCallback(() => {
+    if (!gapRemovalTarget || !onMoveEntry) return;
+    const moves = computeGapRemovalMoves(gapRemovalTarget.classId, gapRemovalTarget.day);
+    for (const move of moves) {
+      onMoveEntry(move.entryId, gapRemovalTarget.day, move.newPeriod);
+    }
+    setGapRemovalTarget(null);
+  }, [gapRemovalTarget, onMoveEntry, computeGapRemovalMoves]);
+
   return (
     <div className="space-y-6 animate-fade-in" role="region" aria-label="Luokkakohtainen lukujärjestys">
       {/* Class selector */}
