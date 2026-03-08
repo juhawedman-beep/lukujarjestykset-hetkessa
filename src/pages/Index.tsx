@@ -13,8 +13,9 @@ import ConflictsPanel from '@/components/ConflictsPanel';
 import RoomView from '@/components/RoomView';
 import WorkloadAnalysis from '@/components/WorkloadAnalysis';
 import PrintTimetable, { triggerPrint } from '@/components/PrintTimetable';
-import { GraduationCap, Calendar, User, Users, AlertTriangle, Printer, DoorOpen, BarChart3 } from 'lucide-react';
+import { GraduationCap, Calendar, User, Users, AlertTriangle, Printer, DoorOpen, BarChart3, Undo2, Redo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/hooks/use-toast';
 
 type ViewMode = 'teacher' | 'class' | 'rooms' | 'workload' | 'conflicts';
 
