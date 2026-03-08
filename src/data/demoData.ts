@@ -45,7 +45,7 @@ export const rooms: Room[] = [
   { id: 'r1', name: 'Luokka 101', type: 'classroom', capacity: 30 },
   { id: 'r2', name: 'Luokka 102', type: 'classroom', capacity: 30 },
   { id: 'r3', name: 'Luokka 103', type: 'classroom', capacity: 30 },
-  { id: 'r4', name: 'Liikuntasali', type: 'gym', capacity: 60 },
+  { id: 'r4', name: 'Liikuntasali', type: 'gym', capacity: 60, maxConcurrent: 2 },
   { id: 'r5', name: 'Musiikkiluokka', type: 'music', capacity: 30 },
   { id: 'r6', name: 'Kuvataideluokka', type: 'art', capacity: 25 },
   { id: 'r7', name: 'Tekninen työ', type: 'workshop', capacity: 16 },

@@ -98,8 +98,9 @@ export function detectConflicts(
       roomGroups.get(e.roomId)!.push(e);
     }
     for (const [roomId, group] of roomGroups) {
-      if (group.length > 1) {
-        const room = roomMap.get(roomId);
+      const room = roomMap.get(roomId);
+      const maxConcurrent = room?.maxConcurrent ?? 1;
+      if (group.length > maxConcurrent) {
         const roomName = room ? room.name : roomId;
         const classIds = group.map(e => e.classId).join(', ');
         warnings.push({
@@ -107,7 +108,7 @@ export function detectConflicts(
           type: 'room_conflict',
           dayOfWeek: day,
           period,
-          message: `Tila "${roomName}" on varattu kahdelle ryhmälle ${DAY_NAMES[day]} tunnilla ${period} (ryhmät: ${classIds}).`,
+          message: `Tila "${roomName}" on varattu ${group.length} ryhmälle ${DAY_NAMES[day]} tunnilla ${period} (max ${maxConcurrent}, ryhmät: ${classIds}).`,
           lawReference: 'Yhdenvertaisuuslaki 1325/2014 – Oppilaiden yhdenvertainen pääsy opetustiloihin tulee varmistaa.',
           entryIds: group.map(e => e.id),
         });

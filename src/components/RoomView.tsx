@@ -150,7 +150,8 @@ export default function RoomView({ entries, subjects, classes, rooms, timeSlots,
                 {[1, 2, 3, 4, 5].map(day => {
                   const key = `${day}-${slot.period}`;
                   const cellEntries = grid.get(key) ?? [];
-                  const hasConflict = cellEntries.length > 1;
+                  const maxConcurrent = selectedRoom?.maxConcurrent ?? 1;
+                  const hasConflict = cellEntries.length > maxConcurrent;
 
                   if (cellEntries.length === 0) {
                     return (

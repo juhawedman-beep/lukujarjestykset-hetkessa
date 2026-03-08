@@ -33,6 +33,7 @@ export interface Room {
   name: string;
   type: 'classroom' | 'gym' | 'music' | 'art' | 'workshop' | 'science_lab' | 'it_room';
   capacity: number;
+  maxConcurrent?: number; // How many groups can use the room simultaneously (default 1)
 }
 
 export interface TimeSlot {
