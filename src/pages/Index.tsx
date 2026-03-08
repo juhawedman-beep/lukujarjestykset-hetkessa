@@ -200,6 +200,7 @@ export default function Index() {
                 <span className="hidden sm:inline">Tulosta</span>
               </Button>
             )}
+            <RoomManagementDialog rooms={rooms} onSave={setRooms} />
             <SettingsDialog settings={settings} onSave={setSettings} />
             <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
               <Calendar className="w-4 h-4" aria-hidden="true" />
