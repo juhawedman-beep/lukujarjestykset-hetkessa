@@ -100,7 +100,7 @@ export default function RoomView({ entries, subjects, classes, rooms, timeSlots,
 
       {/* Room info */}
       {selectedRoom && (
-        <div className="flex items-center gap-6 p-4 bg-card border border-border rounded-lg">
+        <div className="flex items-center gap-6 p-4 bg-card border border-border rounded-lg flex-wrap">
           <div>
             <h3 className="text-lg font-semibold text-foreground">{selectedRoom.name}</h3>
             <p className="text-sm text-muted-foreground">{roomTypeLabels[selectedRoom.type] ?? selectedRoom.type}</p>
@@ -110,6 +110,15 @@ export default function RoomView({ entries, subjects, classes, rooms, timeSlots,
             <div className="text-2xl font-bold text-foreground">{selectedRoom.capacity}</div>
             <div className="text-xs text-muted-foreground">Kapasiteetti</div>
           </div>
+          {(selectedRoom.maxConcurrent ?? 1) > 1 && (
+            <>
+              <div className="h-10 w-px bg-border" />
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">{selectedRoom.maxConcurrent}</div>
+                <div className="text-xs text-muted-foreground">Max ryhmää</div>
+              </div>
+            </>
+          )}
           <div className="h-10 w-px bg-border" />
           <div className="text-center">
             <div className={`text-2xl font-bold ${usageStats.usagePercent >= 80 ? 'text-subject-sports' : usageStats.usagePercent >= 50 ? 'text-subject-math' : 'text-muted-foreground'}`}>
