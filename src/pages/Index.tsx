@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { teachers, subjects, schoolClasses, rooms, timetableEntries as initialEntries } from '@/data/demoData';
+import { teachers, subjects, schoolClasses, rooms as initialRooms, timetableEntries as initialEntries } from '@/data/demoData';
 import { DEFAULT_SETTINGS, generateTimeSlots } from '@/lib/timetableSettings';
 import type { TimetableSettings } from '@/lib/timetableSettings';
 import type { TimetableEntry, AdditionalTeacher } from '@/types/timetable';
@@ -11,6 +11,7 @@ import SubjectLegend from '@/components/SubjectLegend';
 import SettingsDialog from '@/components/SettingsDialog';
 import ClassView from '@/components/ClassView';
 import ConflictsPanel from '@/components/ConflictsPanel';
+import RoomManagementDialog from '@/components/RoomManagementDialog';
 import RoomView from '@/components/RoomView';
 import WorkloadAnalysis from '@/components/WorkloadAnalysis';
 import PrintTimetable, { triggerPrint } from '@/components/PrintTimetable';
@@ -32,6 +33,7 @@ export default function Index() {
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(teachers[0]?.id ?? null);
   const [settings, setSettings] = useState<TimetableSettings>(DEFAULT_SETTINGS);
   const [viewMode, setViewMode] = useState<ViewMode>('teacher');
+  const [rooms, setRooms] = useState(initialRooms);
   const [entries, setEntries] = useState<TimetableEntry[]>(initialEntries);
   const [isPrinting, setIsPrinting] = useState(false);
   const undoStack = useRef<TimetableEntry[][]>([]);
@@ -198,6 +200,7 @@ export default function Index() {
                 <span className="hidden sm:inline">Tulosta</span>
               </Button>
             )}
+            <RoomManagementDialog rooms={rooms} onSave={setRooms} />
             <SettingsDialog settings={settings} onSave={setSettings} />
             <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
               <Calendar className="w-4 h-4" aria-hidden="true" />
