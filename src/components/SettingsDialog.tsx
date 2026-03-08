@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import type { TimetableSettings } from '@/lib/timetableSettings';
+import type { TimetableSettings, SpecialBreak } from '@/lib/timetableSettings';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Settings } from 'lucide-react';
+import { Settings, Plus, Trash2 } from 'lucide-react';
 import { generateTimeSlots } from '@/lib/timetableSettings';
 
 interface SettingsDialogProps {
@@ -25,6 +25,31 @@ export default function SettingsDialog({ settings, onSave }: SettingsDialogProps
     setDraft(prev => ({ ...prev, [key]: value }));
   };
 
+  const updateSpecialBreak = (index: number, field: keyof SpecialBreak, value: string | number) => {
+    setDraft(prev => {
+      const breaks = [...prev.specialBreaks];
+      breaks[index] = { ...breaks[index], [field]: value };
+      return { ...prev, specialBreaks: breaks };
+    });
+  };
+
+  const addSpecialBreak = () => {
+    setDraft(prev => ({
+      ...prev,
+      specialBreaks: [
+        ...prev.specialBreaks,
+        { afterPeriod: 2, duration: 15, label: 'Pitkä välitunti' },
+      ],
+    }));
+  };
+
+  const removeSpecialBreak = (index: number) => {
+    setDraft(prev => ({
+      ...prev,
+      specialBreaks: prev.specialBreaks.filter((_, i) => i !== index),
+    }));
+  };
+
   const preview = generateTimeSlots(draft);
 
   const handleSave = () => {
@@ -40,7 +65,7 @@ export default function SettingsDialog({ settings, onSave }: SettingsDialogProps
           <span className="hidden sm:inline">Asetukset</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Aikarakenne</DialogTitle>
         </DialogHeader>
@@ -72,7 +97,7 @@ export default function SettingsDialog({ settings, onSave }: SettingsDialogProps
           {/* Row 2: Break + periods */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="breakDuration" className="text-xs">Välitunti (min)</Label>
+              <Label htmlFor="breakDuration" className="text-xs">Normaali välitunti (min)</Label>
               <Input
                 id="breakDuration"
                 type="number"
@@ -95,68 +120,79 @@ export default function SettingsDialog({ settings, onSave }: SettingsDialogProps
             </div>
           </div>
 
-          {/* Row 3: Long break */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="longBreakDuration" className="text-xs">Pitkä välitunti (min)</Label>
-              <Input
-                id="longBreakDuration"
-                type="number"
-                min={10}
-                max={45}
-                value={draft.longBreakDuration}
-                onChange={e => update('longBreakDuration', Number(e.target.value))}
-              />
+          {/* Special breaks */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium">Pidennetyt tauot</Label>
+              <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={addSpecialBreak}>
+                <Plus className="w-3 h-3" /> Lisää tauko
+              </Button>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="longBreakAfterPeriod" className="text-xs">Pitkä tauko tunnin jälkeen</Label>
-              <Input
-                id="longBreakAfterPeriod"
-                type="number"
-                min={1}
-                max={draft.periodsPerDay - 1}
-                value={draft.longBreakAfterPeriod}
-                onChange={e => update('longBreakAfterPeriod', Number(e.target.value))}
-              />
-            </div>
-          </div>
-
-          {/* Row 4: Lunch break */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="lunchBreakDuration" className="text-xs">Ruokatauko (min)</Label>
-              <Input
-                id="lunchBreakDuration"
-                type="number"
-                min={15}
-                max={60}
-                value={draft.lunchBreakDuration}
-                onChange={e => update('lunchBreakDuration', Number(e.target.value))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="lunchBreakAfterPeriod" className="text-xs">Ruokatauko tunnin jälkeen</Label>
-              <Input
-                id="lunchBreakAfterPeriod"
-                type="number"
-                min={1}
-                max={draft.periodsPerDay - 1}
-                value={draft.lunchBreakAfterPeriod}
-                onChange={e => update('lunchBreakAfterPeriod', Number(e.target.value))}
-              />
-            </div>
+            {draft.specialBreaks.length === 0 && (
+              <p className="text-xs text-muted-foreground italic">Ei pidennettyjä taukoja – kaikki välitunnit ovat {draft.breakDuration} min.</p>
+            )}
+            {draft.specialBreaks.map((sb, i) => (
+              <div key={i} className="flex items-end gap-2 p-2 rounded-md border border-border bg-muted/30">
+                <div className="space-y-1 flex-1">
+                  <Label className="text-xs">Nimi</Label>
+                  <Input
+                    value={sb.label}
+                    onChange={e => updateSpecialBreak(i, 'label', e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="space-y-1 w-20">
+                  <Label className="text-xs">Tunnin jälk.</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={draft.periodsPerDay - 1}
+                    value={sb.afterPeriod}
+                    onChange={e => updateSpecialBreak(i, 'afterPeriod', Number(e.target.value))}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="space-y-1 w-20">
+                  <Label className="text-xs">Kesto (min)</Label>
+                  <Input
+                    type="number"
+                    min={5}
+                    max={60}
+                    value={sb.duration}
+                    onChange={e => updateSpecialBreak(i, 'duration', Number(e.target.value))}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                  onClick={() => removeSpecialBreak(i)}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            ))}
           </div>
 
           {/* Preview */}
           <div className="mt-2 p-3 bg-muted/50 rounded-lg border border-border">
             <p className="text-xs font-medium text-muted-foreground mb-2">Esikatselu</p>
             <div className="grid grid-cols-4 gap-1 text-xs">
-              {preview.map(slot => (
-                <div key={slot.period} className="flex items-center gap-1.5 py-0.5">
-                  <span className="font-medium text-foreground w-4">{slot.period}.</span>
-                  <span className="text-muted-foreground font-mono">{slot.startTime}–{slot.endTime}</span>
-                </div>
-              ))}
+              {preview.map((slot, idx) => {
+                const specialAfter = draft.specialBreaks.find(sb => sb.afterPeriod === slot.period);
+                return (
+                  <div key={slot.period} className="flex flex-col py-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-medium text-foreground w-4">{slot.period}.</span>
+                      <span className="text-muted-foreground font-mono">{slot.startTime}–{slot.endTime}</span>
+                    </div>
+                    {specialAfter && idx < preview.length - 1 && (
+                      <span className="text-[10px] text-primary ml-5 mt-0.5">{specialAfter.label} ({specialAfter.duration} min)</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
