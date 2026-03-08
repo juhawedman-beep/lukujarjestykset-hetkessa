@@ -300,6 +300,7 @@ export default function ClassView({ entries, subjects, classes, rooms, timeSlots
                   const teacher = teacherMap.get(entry.teacherId);
                   const colorClasses = subject ? categoryColorMap[subject.category] : categoryColorMap.free;
                   const isDragging = draggedEntry === entry.id;
+                  const hasAdditional = (entry.additionalTeachers?.length ?? 0) > 0;
 
                   return (
                     <td
@@ -313,18 +314,27 @@ export default function ClassView({ entries, subjects, classes, rooms, timeSlots
                         draggable={!!onMoveEntry}
                         onDragStart={() => handleDragStart(entry.id)}
                         onDragEnd={handleDragEnd}
+                        onClick={() => onEntryClick?.(entry.id)}
                         className={`h-16 rounded-md border p-2 flex flex-col justify-between transition-all ${
-                          onMoveEntry ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
+                          onMoveEntry ? 'cursor-grab active:cursor-grabbing' : onEntryClick ? 'cursor-pointer' : 'cursor-default'
                         } hover:scale-[1.02] hover:shadow-md ${colorClasses} ${isDragging ? 'opacity-40 scale-95' : ''} ${isDragOver ? 'ring-2 ring-primary' : ''}`}
                         role="gridcell"
-                        aria-label={`${subject?.name ?? 'Tuntematon'}, ${teacher?.lastName ?? ''}, ${room?.name ?? ''}, ${DAYS_FULL_FI[day - 1]} tunti ${slot.period}`}
+                        aria-label={`${subject?.name ?? 'Tuntematon'}, ${teacher?.lastName ?? ''}, ${room?.name ?? ''}`}
                         tabIndex={0}
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-semibold">{subject?.abbreviation}</span>
-                          <span className="text-xs opacity-60">{teacher?.lastName}</span>
+                          <div className="flex items-center gap-1">
+                            {hasAdditional && <Users className="w-3 h-3 opacity-60" />}
+                            <span className="text-xs opacity-60">{teacher?.lastName}</span>
+                          </div>
                         </div>
-                        <div className="text-xs opacity-70 truncate">{room?.name}</div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs opacity-70 truncate">{room?.name}</span>
+                          {hasAdditional && (
+                            <span className="text-[10px] opacity-60">+{entry.additionalTeachers!.length}</span>
+                          )}
+                        </div>
                       </div>
                     </td>
                   );
