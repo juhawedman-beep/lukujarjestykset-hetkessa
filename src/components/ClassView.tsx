@@ -25,7 +25,7 @@ const categoryColorMap: Record<string, string> = {
   free: 'bg-subject-free/15 text-muted-foreground border-subject-free/30',
 };
 
-export default function ClassView({ entries, subjects, classes, rooms, timeSlots, teachers, onMoveEntry }: ClassViewProps) {
+export default function ClassView({ entries, subjects, classes, rooms, timeSlots, teachers, onMoveEntry, onEntryClick }: ClassViewProps) {
   const [selectedClassId, setSelectedClassId] = useState<string>(classes[0]?.id ?? '');
   const [expandedWarnings, setExpandedWarnings] = useState<Set<number>>(new Set());
   const [draggedEntry, setDraggedEntry] = useState<string | null>(null);
