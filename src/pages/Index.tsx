@@ -103,6 +103,7 @@ export default function Index() {
     setEntries(prev => {
       const entry = prev.find(e => e.id === entryId);
       if (!entry) return prev;
+      pushUndo(prev);
       const targetEntry = prev.find(
         e => e.classId === entry.classId && e.dayOfWeek === newDay && e.period === newPeriod
       );
@@ -115,7 +116,7 @@ export default function Index() {
       }
       return prev.map(e => e.id === entryId ? { ...e, dayOfWeek: newDay, period: newPeriod } : e);
     });
-  }, []);
+  }, [pushUndo]);
 
   const handlePrint = useCallback(() => {
     setIsPrinting(true);
