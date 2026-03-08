@@ -172,6 +172,12 @@ export default function Index() {
           </nav>
 
           <div className="ml-auto flex items-center gap-2 shrink-0">
+            <Button variant="ghost" size="sm" onClick={handleUndo} aria-label="Kumoa (Ctrl+Z)" title="Kumoa (Ctrl+Z)">
+              <Undo2 className="w-4 h-4" aria-hidden="true" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleRedo} aria-label="Tee uudelleen (Ctrl+Y)" title="Tee uudelleen (Ctrl+Y)">
+              <Redo2 className="w-4 h-4" aria-hidden="true" />
+            </Button>
             {viewMode === 'teacher' && selectedTeacher && (
               <Button variant="outline" size="sm" className="gap-1.5" onClick={handlePrint} aria-label="Tulosta lukujärjestys">
                 <Printer className="w-3.5 h-3.5" aria-hidden="true" />
