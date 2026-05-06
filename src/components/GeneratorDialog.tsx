@@ -1,11 +1,11 @@
 // src/components/GeneratorDialog.tsx
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Wand2, CheckCircle2, Loader2, Download, Calendar, BookOpen, Upload } from 'lucide-react';
+import { Wand2, CheckCircle2, Loader2, Download, BookOpen, Sparkles } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 import type { Subject, Teacher, SchoolClass, Room, TimetableEntry } from '@/types/timetable';
@@ -15,11 +15,9 @@ import {
   type TeacherHomeRoom,
   type GeneratorResult,
   type GeneratorInput,
-  type GenerationOptions,
 } from '@/lib/timetableGenerator';
 import { downloadTimetableAsCSV } from '@/lib/timetableExport';
 import { generateOPSRequirements } from '@/lib/opsCurriculum';
-import { parseWilmaCSV, downloadWilmaImportTemplate } from '@/lib/wilmaImport';
 
 interface GeneratorDialogProps {
   classes: SchoolClass[];
@@ -75,34 +73,16 @@ export default function GeneratorDialog({
   const getReqHours = (classId: string, subjectId: string) =>
     requirements.find(r => r.classId === classId && r.subjectId === subjectId)?.hoursPerWeek ?? 0;
 
-  // OPS-tuntijako
   const handleFillOPS = () => {
     let newReqs: LessonRequirement[] = [];
     classes.forEach(cls => {
       newReqs = [...newReqs, ...generateOPSRequirements(cls, subjects)];
     });
     setRequirements(newReqs);
-    toast({ title: '✅ OPS-tuntijako täytetty', description: `Täytettiin ${newReqs.length} tuntia.` });
-  };
-
-  // Wilma-tuonti
-  const handleWilmaImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const csvText = event.target?.result as string;
-      const imported = parseWilmaCSV(csvText, classes, subjects);
-      if (imported.length > 0) {
-        setRequirements(imported);
-        toast({ title: '✅ Wilma-tuonti onnistui', description: `${imported.length} tuntivaatimusta tuotu.` });
-      } else {
-        toast({ title: 'Tuonti epäonnistui', description: 'Tarkista tiedoston formaatti.', variant: 'destructive' });
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
+    toast({
+      title: '✅ OPS-tuntijako täytetty',
+      description: `Täytettiin ${newReqs.length} tuntirivin pohja.`,
+    });
   };
 
   const handleGenerate = () => {
@@ -117,7 +97,7 @@ export default function GeneratorDialog({
       const generated = generateTimetable(input, {
         maxAttempts: 40,
         softConstraintWeight: 0.8,
-        includeExplanations: true
+        includeExplanations: true,
       });
 
       setResults(generated);
@@ -140,7 +120,7 @@ export default function GeneratorDialog({
     if (!selectedResult) return;
     downloadTimetableAsCSV(selectedResult, {
       classes, teachers, subjects, rooms, requirements,
-      teacherHomeRooms: homeRooms, periodsPerDay
+      teacherHomeRooms: homeRooms, periodsPerDay,
     } as any);
     toast({ title: 'CSV ladattu', description: 'Valmis Kurre/Primus-tuontiin' });
   };
@@ -163,84 +143,127 @@ export default function GeneratorDialog({
         </DialogHeader>
 
         {step === 'config' && (
-          <div className="space-y-8 py-4">
-            {/* Tuontinapit */}
+          <div className="space-y-6 py-2">
             <div className="flex flex-wrap gap-3">
-              <Button onClick={handleFillOPS} variant="outline" className="gap-2">
+              <Button onClick={handleFillOPS} variant="default" className="gap-2">
                 <BookOpen className="w-4 h-4" />
                 Täytä OPS-tuntijako automaattisesti
               </Button>
-
-              <Button onClick={downloadWilmaImportTemplate} variant="outline" className="gap-2">
-                <Download className="w-4 h-4" />
-                Lataa esimerkki CSV
-              </Button>
-
-              <label className="cursor-pointer">
-                <Button variant="outline" className="gap-2" asChild>
-                  <span>
-                    <Upload className="w-4 h-4" />
-                    Tuo Wilmasta (CSV)
-                  </span>
-                </Button>
-                <input 
-                  type="file" 
-                  accept=".csv" 
-                  onChange={handleWilmaImport} 
-                  className="hidden" 
-                />
-              </label>
+              <div className="text-sm text-muted-foreground self-center">
+                Yhteensä: <span className="font-semibold text-foreground">{totalRequired}</span> tuntia / viikko
+              </div>
             </div>
 
-            {/* Tuntitaulukko */}
             <div>
               <h3 className="font-medium mb-3">Viikkotunnit per luokka ja aine</h3>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Luokka</TableHead>
-                    <TableHead>Aine</TableHead>
-                    <TableHead className="text-right">Tunnit / viikko</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {classes.flatMap(cls =>
-                    subjects.map(subj => (
-                      <TableRow key={`${cls.id}-${subj.id}`}>
-                        <TableCell>{cls.name}</TableCell>
-                        <TableCell>{subj.name}</TableCell>
-                        <TableCell className="text-right">
-                          <Input
-                            type="number"
-                            min={0}
-                            max={10}
-                            value={getReqHours(cls.id, subj.id)}
-                            onChange={e => updateReq(cls.id, subj.id, parseInt(e.target.value) || 0)}
-                            className="w-20 text-center"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+              <div className="border rounded-md max-h-[420px] overflow-y-auto">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-background">
+                    <TableRow>
+                      <TableHead>Luokka</TableHead>
+                      <TableHead>Aine</TableHead>
+                      <TableHead className="text-right">Tunnit / viikko</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {classes.flatMap(cls =>
+                      subjects.map(subj => (
+                        <TableRow key={`${cls.id}-${subj.id}`}>
+                          <TableCell className="font-medium">{cls.name}</TableCell>
+                          <TableCell>{subj.name}</TableCell>
+                          <TableCell className="text-right">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={10}
+                              value={getReqHours(cls.id, subj.id)}
+                              onChange={e => updateReq(cls.id, subj.id, parseInt(e.target.value) || 0)}
+                              className="w-20 text-center ml-auto"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
 
             <div className="flex justify-end gap-3">
               <Button variant="outline" onClick={() => setOpen(false)}>Peruuta</Button>
               <Button onClick={handleGenerate} disabled={generating || totalRequired === 0}>
-                {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wand2 className="w-4 h-4 mr-2" />}
+                {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
                 Generoi 2–3 vaihtoehtoa
               </Button>
             </div>
           </div>
         )}
 
-        {/* TULOSOSIO */}
         {step === 'result' && selectedResult && (
-          <div className="space-y-6">
-            {/* ... (sama kuin edellisessä versiossa) */}
-            {/* Voit kopioida tulososion edellisestä toimivasta versiostasi */}
+          <div className="space-y-6 py-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {results.map((res, idx) => {
+                const active = idx === selectedResultIndex;
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedResultIndex(idx)}
+                    className={`text-left rounded-lg border p-4 transition ${
+                      active ? 'border-primary bg-primary/5 ring-2 ring-primary/30' : 'border-border hover:bg-muted/40'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-semibold">Vaihtoehto {idx + 1}</span>
+                      {active && <CheckCircle2 className="w-4 h-4 text-primary" />}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Laatupisteet: <span className="font-semibold text-foreground">{Math.round(res.score)}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {res.entries.length} tuntia · {res.unplaced?.length || 0} sijoittamatta
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="rounded-lg border p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium">Valittu vaihtoehto {selectedResultIndex + 1}</h4>
+                <div className="flex gap-2">
+                  <Badge variant="secondary">
+                    {selectedResult.entries.length} tuntia
+                  </Badge>
+                  <Badge variant={selectedResult.unplaced?.length ? 'destructive' : 'default'}>
+                    {selectedResult.unplaced?.length || 0} sijoittamatta
+                  </Badge>
+                </div>
+              </div>
+
+              {selectedResult.explanations && selectedResult.explanations.length > 0 && (
+                <div className="text-sm text-muted-foreground space-y-1">
+                  {selectedResult.explanations.slice(0, 5).map((exp, i) => (
+                    <div key={i}>• {exp}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-between gap-3">
+              <Button variant="outline" onClick={() => setStep('config')}>
+                ← Muokkaa pohjaa
+              </Button>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={handleExport} className="gap-2">
+                  <Download className="w-4 h-4" />
+                  Vie CSV (Kurre/Primus)
+                </Button>
+                <Button onClick={handleApply} className="gap-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Ota käyttöön
+                </Button>
+              </div>
+            </div>
           </div>
         )}
       </DialogContent>
