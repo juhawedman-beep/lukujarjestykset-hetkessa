@@ -42,15 +42,15 @@ function norm(s: string): string {
 }
 
 const HEADER_ALIASES: Record<string, string[]> = {
-  className: ['luokka', 'ryhma', 'ryhman nimi', 'opetusryhma', 'class', 'group'],
-  gradeLevel: ['vuosiluokka', 'luokkaaste', 'aste', 'grade'],
-  studentCount: ['oppilasmaara', 'oppilaita', 'koko', 'students', 'count'],
+  className: ['luokka', 'ryhma', 'ryhman nimi', 'opetusryhma', 'opetusryhman nimi', 'class', 'group', 'kurssi', 'ryhmat'],
+  gradeLevel: ['vuosiluokka', 'luokkaaste', 'aste', 'grade', 'vuosi'],
+  studentCount: ['oppilasmaara', 'oppilaita', 'koko', 'students', 'count', 'maara'],
   firstName: ['etunimi', 'firstname', 'first', 'etunimet'],
   lastName: ['sukunimi', 'lastname', 'last'],
-  fullName: ['nimi', 'name', 'opettaja', 'teacher'],
-  subjects: ['aineet', 'oppiaineet', 'opetettavat', 'subjects'],
-  subject: ['aine', 'oppiaine', 'subject'],
-  hours: ['tunnit', 'vvt', 'viikkotunnit', 'tuntimaara', 'hours', 'hoursperweek'],
+  fullName: ['nimi', 'name', 'opettaja', 'teacher', 'opettajan nimi'],
+  subjects: ['aineet', 'oppiaineet', 'opetettavat', 'subjects', 'opetettavat aineet'],
+  subject: ['aine', 'oppiaine', 'subject', 'aineen nimi', 'ainelyhenne', 'lyhenne'],
+  hours: ['tunnit', 'vvt', 'vkt', 'vkh', 'viikkotunnit', 'tuntimaara', 'tuntia', 'tuntiavk', 'tvk', 'hours', 'hoursperweek', 'vuosiviikkotunnit'],
 };
 
 function findHeaderIndex(headers: string[], aliases: string[]): number {
