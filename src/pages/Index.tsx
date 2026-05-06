@@ -320,6 +320,12 @@ export default function Index() {
           </div>
         )}
 
+        {!isLoading && !isEmpty && viewMode === 'student' && (
+          <div className="space-y-6" role="tabpanel" aria-label="Oppilaskohtainen lukujärjestys">
+            <StudentView entries={filteredEntries} subjects={subjects} classes={schoolClasses} rooms={rooms} teachers={teachers} timeSlots={timeSlots} />
+          </div>
+        )}
+
         {!isLoading && !isEmpty && viewMode === 'rooms' && (
           <div className="space-y-6" role="tabpanel" aria-label="Tilojen varauskalenteri">
             <RoomView entries={filteredEntries} subjects={subjects} classes={schoolClasses} rooms={rooms} timeSlots={timeSlots} teachers={teachers} />
