@@ -18,10 +18,14 @@ import GeneratorDialog from '@/components/GeneratorDialog';
 import UserMenu from '@/components/UserMenu';
 import WilmaImportDialog from '@/components/WilmaImportDialog';
 import EmptyState from '@/components/EmptyState';
-import { GraduationCap, Calendar, User, Users, AlertTriangle, Printer, DoorOpen, BarChart3, Undo2, Redo2, Loader2 } from 'lucide-react';
+import { GraduationCap, Calendar, User, Users, AlertTriangle, Printer, DoorOpen, BarChart3, Undo2, Redo2, Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { useSubjects, useTeachers, useSchoolClasses, useRooms } from '@/hooks/useSchoolData';
+import { useSaveRooms } from '@/hooks/useRooms';
+import { useActiveTimetable, useTimetableEntries, useSaveTimetable } from '@/hooks/useTimetable';
+import AddClassDialog from '@/components/AddClassDialog';
+import AddTeacherDialog from '@/components/AddTeacherDialog';
 
 type ViewMode = 'teacher' | 'class' | 'rooms' | 'workload' | 'conflicts';
 
@@ -39,6 +43,11 @@ export default function Index() {
   const { data: schoolClasses = [], isLoading: loadingClasses } = useSchoolClasses();
   const { data: roomsFromDb = [], isLoading: loadingRooms } = useRooms();
 
+  const { data: activeTimetable } = useActiveTimetable();
+  const { data: dbEntries } = useTimetableEntries(activeTimetable?.id);
+  const saveRooms = useSaveRooms();
+  const saveTimetable = useSaveTimetable();
+
   const isLoading = loadingSubjects || loadingTeachers || loadingClasses || loadingRooms;
   const isEmpty = !isLoading && teachers.length === 0 && schoolClasses.length === 0;
 
@@ -51,10 +60,19 @@ export default function Index() {
   const undoStack = useRef<TimetableEntry[][]>([]);
   const redoStack = useRef<TimetableEntry[][]>([]);
 
-  // Sync rooms from DB when loaded (until we wire room CRUD to DB too)
+  // Sync rooms from DB
   useEffect(() => {
     setRooms(roomsFromDb);
   }, [roomsFromDb]);
+
+  // Hydrate entries from DB once when loaded
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    if (!hydratedRef.current && dbEntries && dbEntries.length > 0) {
+      setEntries(dbEntries);
+      hydratedRef.current = true;
+    }
+  }, [dbEntries]);
 
   // Auto-select first teacher when list arrives
   useEffect(() => {
