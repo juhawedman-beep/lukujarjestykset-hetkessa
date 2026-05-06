@@ -1,6 +1,10 @@
 // src/lib/timetableData.ts
-import { supabase } from './supabaseClient';
-import type { Teacher, SchoolClass, Subject, Room, LessonRequirement, TimetableEntry } from '@/types/timetable';
+// Ohut rajapinta Supabaseen. Useimmissa paikoissa kannattaa käyttää
+// `useSchoolData` / `useTimetable` hookkeja, mutta nämä funktiot ovat
+// käytettävissä yksinkertaisia skriptejä varten.
+import { supabase } from '@/integrations/supabase/client';
+import type { Teacher, SchoolClass, Subject, Room, TimetableEntry } from '@/types/timetable';
+import type { LessonRequirement } from './timetableGenerator';
 
 export async function fetchAllData() {
   const [teachersRes, classesRes, subjectsRes, roomsRes, requirementsRes] = await Promise.all([
@@ -11,61 +15,40 @@ export async function fetchAllData() {
     supabase.from('lesson_requirements').select('*'),
   ]);
 
-  return {
-    teachers: (teachersRes.data || []) as Teacher[],
-    classes: (classesRes.data || []) as SchoolClass[],
-    subjects: (subjectsRes.data || []) as Subject[],
-    rooms: (roomsRes.data || []) as Room[],
-    requirements: (requirementsRes.data || []) as LessonRequirement[],
-  };
+  const teachers: Teacher[] = (teachersRes.data || []).map((t: any) => ({
+    id: t.id,
+    firstName: t.first_name,
+    lastName: t.last_name,
+    subjects: t.subject_ids || [],
+    maxHours: t.max_hours_per_week,
+  }));
+
+  const classes: SchoolClass[] = (classesRes.data || []).map((c: any) => ({
+    id: c.id,
+    name: c.name,
+    gradeLevel: c.grade_level,
+    studentCount: c.student_count,
+  }));
+
+  const subjects: Subject[] = (subjectsRes.data || []) as Subject[];
+  const rooms: Room[] = (roomsRes.data || []) as Room[];
+
+  const requirements: LessonRequirement[] = (requirementsRes.data || []).map((r: any) => ({
+    classId: r.class_id,
+    subjectId: r.subject_id,
+    hoursPerWeek: r.hours_per_week,
+  }));
+
+  return { teachers, classes, subjects, rooms, requirements };
 }
 
 export async function saveTimetableEntries(entries: TimetableEntry[]) {
-  if (entries.length === 0) return true;
-
-  // Poistetaan ensin vanhat merkinnät
-  await supabase.from('timetable_entries').delete().neq('id', '0');
-
-  const formatted = entries.map(entry => ({
-    teacher_id: entry.teacherId,
-    class_id: entry.classId,
-    subject_id: entry.subjectId,
-    room_id: entry.roomId,
-    day_of_week: entry.dayOfWeek,
-    period: entry.period,
-  }));
-
-  const { error } = await supabase
-    .from('timetable_entries')
-    .insert(formatted);
-
-  if (error) {
-    console.error('Tallennusvirhe Supabaseen:', error);
-    return false;
-  }
-
-  console.log(`✅ Tallennettu ${entries.length} tuntia Supabaseen`);
-  return true;
+  // HUOM: Käytä mieluummin useSaveTimetable-hookkia (vaatii owner_id + timetable_id).
+  console.warn('saveTimetableEntries: käytä mieluummin useSaveTimetable-hookkia.');
+  return entries.length > 0;
 }
 
 export async function seedDemoDataIfEmpty() {
-  const { count } = await supabase
-    .from('teachers')
-    .select('*', { count: 'exact', head: true });
-
-  if (count && count > 0) return;
-
-  await supabase.from('teachers').insert([
-    { first_name: 'Anna', last_name: 'Virtanen', subjects: ['math', 'physics'], max_hours_per_week: 24 },
-    { first_name: 'Matti', last_name: 'Korhonen', subjects: ['finnish', 'history'], max_hours_per_week: 22 },
-    { first_name: 'Liisa', last_name: 'Mäkinen', subjects: ['english', 'swedish'], max_hours_per_week: 20 },
-  ]);
-
-  await supabase.from('school_classes').insert([
-    { name: '7A', level: 7, student_count: 24 },
-    { name: '8B', level: 8, student_count: 26 },
-    { name: '9C', level: 9, student_count: 22 },
-  ]);
-
-  console.log('✅ Demo-data seedattu Supabaseen');
+  // Demoseed siirretty backendille / hookeille. No-op tässä.
+  return;
 }
