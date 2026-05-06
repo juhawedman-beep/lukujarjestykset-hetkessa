@@ -1,6 +1,7 @@
 // src/lib/timetableData.ts
-import { supabase } from './supabaseClient';
-import type { Teacher, SchoolClass, Subject, Room, LessonRequirement, TimetableEntry } from '@/types/timetable';
+import { supabase } from '@/integrations/supabase/client';
+import type { Teacher, SchoolClass, Subject, Room, TimetableEntry } from '@/types/timetable';
+import type { LessonRequirement } from './timetableGenerator';
 
 export async function fetchAllData() {
   const [teachersRes, classesRes, subjectsRes, roomsRes, requirementsRes] = await Promise.all([
