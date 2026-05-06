@@ -47,7 +47,10 @@ export default function Auth() {
 
   const handleLogin = async (data: LoginForm) => {
     setSubmitting(true);
-    const { error } = await supabase.auth.signInWithPassword(data);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    });
     setSubmitting(false);
     if (error) {
       toast.error(error.message === 'Invalid login credentials'
