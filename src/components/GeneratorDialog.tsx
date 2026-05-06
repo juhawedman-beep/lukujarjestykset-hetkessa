@@ -217,7 +217,7 @@ export default function GeneratorDialog({
                       {active && <CheckCircle2 className="w-4 h-4 text-primary" />}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      Laatupisteet: <span className="font-semibold text-foreground">{Math.round(res.score)}</span>
+                      Laatupisteet: <span className="font-semibold text-foreground">{Math.round(res.stats.score)}</span>
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
                       {res.entries.length} tuntia · {res.unplaced?.length || 0} sijoittamatta
