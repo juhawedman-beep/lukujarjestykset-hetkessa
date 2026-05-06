@@ -35,7 +35,7 @@ export default function EmptyState() {
               <h3 className="font-semibold">Lisää käsin</h3>
             </div>
             <p className="text-sm text-muted-foreground mb-3">
-              Lisää tilat <strong>Tilat</strong>-painikkeesta. Luokkien ja opettajien lisäys käsin tulossa.
+              Käytä yläpalkin <strong>Luokka</strong>-, <strong>Opettaja</strong>- ja <strong>Tilat</strong>-painikkeita.
             </p>
           </CardContent>
         </Card>
