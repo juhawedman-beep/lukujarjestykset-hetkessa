@@ -143,6 +143,39 @@ export type Database = {
         }
         Relationships: []
       }
+      students: {
+        Row: {
+          class_id: string
+          created_at: string
+          first_name: string
+          id: string
+          last_name: string
+          notes: string | null
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          first_name: string
+          id?: string
+          last_name: string
+          notes?: string | null
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          notes?: string | null
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       subjects: {
         Row: {
           abbreviation: string
