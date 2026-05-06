@@ -14,8 +14,17 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ["Manrope", "system-ui", "sans-serif"],
+        display: ["Sora", "Manrope", "system-ui", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
+      },
+      backgroundImage: {
+        "gradient-hero": "var(--gradient-hero)",
+        "gradient-subtle": "var(--gradient-subtle)",
+      },
+      boxShadow: {
+        elegant: "var(--shadow-elegant)",
+        card: "var(--shadow-card)",
       },
       colors: {
         border: "hsl(var(--border))",
@@ -59,6 +68,10 @@ export default {
           math: "hsl(var(--subject-math))",
           science: "hsl(var(--subject-science))",
           free: "hsl(var(--subject-free))",
+        },
+        conflict: {
+          DEFAULT: "hsl(var(--conflict))",
+          soft: "hsl(var(--conflict-soft))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",

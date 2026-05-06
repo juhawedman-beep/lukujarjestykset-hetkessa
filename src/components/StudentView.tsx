@@ -150,8 +150,8 @@ export default function StudentView({ entries, subjects, classes, rooms, teacher
                 classes={classes}
                 rooms={rooms}
                 teachers={teachers}
-                timeSlots={timeSlots}
-                title={`${selected.firstName} ${selected.lastName} – ${studentClass.name}`}
+                periodsPerDay={timeSlots?.length ?? 8}
+                onUpdate={() => { /* read-only student view */ }}
               />
             </>
           ) : selected && !studentClass ? (

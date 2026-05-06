@@ -72,4 +72,4 @@ export function downloadTimetableAsCSV(
   URL.revokeObjectURL(url);
 }
 
-export { exportTimetableToKurreCSV, downloadTimetableAsCSV };
+
