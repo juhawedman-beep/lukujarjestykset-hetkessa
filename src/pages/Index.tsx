@@ -254,7 +254,22 @@ export default function Index() {
               periodsPerDay={settings.periodsPerDay}
               onGenerated={handleGenerated}
             />
-            <RoomManagementDialog rooms={rooms} onSave={setRooms} />
+            {entries.length > 0 && (
+              <Button
+                variant="default"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => saveTimetable.mutate({ entries })}
+                disabled={saveTimetable.isPending}
+                aria-label="Tallenna lukujärjestys"
+              >
+                {saveTimetable.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                <span className="hidden sm:inline">Tallenna</span>
+              </Button>
+            )}
+            <AddClassDialog />
+            <AddTeacherDialog />
+            <RoomManagementDialog rooms={rooms} onSave={(r) => { setRooms(r); saveRooms.mutate(r); }} />
             <WilmaImportDialog />
             <SettingsDialog settings={settings} onSave={setSettings} />
             <UserMenu />
