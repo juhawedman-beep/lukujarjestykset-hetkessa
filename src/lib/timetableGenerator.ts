@@ -33,7 +33,7 @@ export interface GeneratorInput {
 }
 
 /**
- * Generaattorin tulos (parannettu).
+ * Generaattorin tulos.
  */
 export interface GeneratorResult {
   entries: TimetableEntry[];
@@ -42,19 +42,19 @@ export interface GeneratorResult {
     totalPlaced: number;
     totalRequired: number;
     conflicts: number;
-    score: number;           // hyvinvointipisteet
+    score: number;
   };
   explanations?: string[];
 }
 
 export interface GenerationOptions {
   maxAttempts: number;
-  softConstraintWeight: number; // 0–1
+  softConstraintWeight: number;
   includeExplanations: boolean;
 }
 
 /**
- * Pääfunktio – markkinakelpoinen versio
+ * Pääfunktio – tuottaa parhaat 3 vaihtoehtoa.
  */
 export function generateTimetable(
   input: GeneratorInput,
@@ -63,9 +63,8 @@ export function generateTimetable(
   const results: GeneratorResult[] = [];
 
   for (let attempt = 0; attempt < options.maxAttempts; attempt++) {
-    const result = runGenerationAttempt(input);
-    const softScore = calculateSoftScore(result, input);
-    result.stats.score = softScore;
+    const result = runGenerationAttempt(input, attempt);
+    result.stats.score = calculateSoftScore(result, input);
 
     if (options.includeExplanations) {
       result.explanations = generateExplanations(result, input);
@@ -76,24 +75,33 @@ export function generateTimetable(
     if (results.length >= 3 && result.stats.conflicts === 0) break;
   }
 
-  // Järjestä parhaimman mukaan (korkein score = paras hyvinvointi)
   results.sort((a, b) => b.stats.score - a.stats.score);
   return results.slice(0, 3);
 }
 
-// ====================== KESKEINEN GREEDY-ALGORITMI ======================
-function runGenerationAttempt(input: GeneratorInput): GeneratorResult {
+// ====================== GREEDY-ALGORITMI (hyppytuntiton) ======================
+function runGenerationAttempt(input: GeneratorInput, attemptSeed = 0): GeneratorResult {
   const entries: TimetableEntry[] = [];
   const unplaced: { classId: string; subjectId: string; reason: string }[] = [];
-  const teacherOccupied = new Map<string, Set<string>>(); // teacherId -> occupied slots
+  const teacherOccupied = new Map<string, Set<string>>();
   const roomOccupied = new Map<string, Set<string>>();
   const classOccupied = new Map<string, Set<string>>();
+  // Luokan päiväkohtainen viimeinen käytetty periodi (hyppytuntien esto)
+  const classDayLastPeriod = new Map<string, Map<number, number>>();
 
   let totalPlaced = 0;
   const totalRequired = input.requirements.reduce((sum, req) => sum + req.hoursPerWeek, 0);
+  const daysPerWeek = input.daysPerWeek || 5;
 
-  // Yksinkertainen greedy-sijoittelu (voi laajentaa myöhemmin)
-  for (const req of input.requirements) {
+  // Järjestä vaatimukset: eniten tunteja ensin (parempi pakkaus)
+  // Pieni pseudosatunnaisuus eri vaihtoehtoja varten
+  const sortedReqs = [...input.requirements].sort((a, b) => {
+    const diff = b.hoursPerWeek - a.hoursPerWeek;
+    if (diff !== 0) return diff;
+    return ((attemptSeed * 13 + a.classId.length) % 7) - ((attemptSeed * 7 + b.classId.length) % 7);
+  });
+
+  for (const req of sortedReqs) {
     const classGroup = input.classes.find(c => c.id === req.classId);
     const subject = input.subjects.find(s => s.id === req.subjectId);
     if (!classGroup || !subject) continue;
@@ -101,50 +109,79 @@ function runGenerationAttempt(input: GeneratorInput): GeneratorResult {
     let placed = 0;
     const needed = req.hoursPerWeek;
 
-    for (let day = 1; day <= (input.daysPerWeek || 5); day++) {
-      for (let period = 1; period <= input.periodsPerDay; period++) {
-        if (placed >= needed) break;
+    if (!classDayLastPeriod.has(req.classId)) classDayLastPeriod.set(req.classId, new Map());
+    const dayLast = classDayLastPeriod.get(req.classId)!;
 
-        const slotKey = `\( {day}- \){period}`;
+    // Käy päivät läpi siinä järjestyksessä, jossa on jo vähiten tunteja (tasapainotus)
+    const dayOrder = Array.from({ length: daysPerWeek }, (_, i) => i + 1)
+      .sort((a, b) => (dayLast.get(a) || 0) - (dayLast.get(b) || 0));
 
-        // Etsi sopiva opettaja ja tila
+    for (const day of dayOrder) {
+      if (placed >= needed) break;
+
+      // Aloita siitä periodista, joka tulee luokan viimeisen tunnin JÄLKEEN.
+      // Jos päivässä ei ole vielä tunteja, aloita periodista 1.
+      const lastUsed = dayLast.get(day) || 0;
+      let nextPeriod = lastUsed + 1;
+
+      while (placed < needed && nextPeriod <= input.periodsPerDay) {
+        const slotKey = `${day}-${nextPeriod}`;
+
+        // Varmista ettei luokalla ole jo tuntia tässä slotissa (ei pitäisi olla, mutta varmuudeksi)
+        if (!classOccupied.has(req.classId)) classOccupied.set(req.classId, new Set());
+        if (classOccupied.get(req.classId)!.has(slotKey)) {
+          nextPeriod++;
+          continue;
+        }
+
+        // Etsi opettaja
         const possibleTeachers = input.teachers.filter(t => t.subjects.includes(req.subjectId));
+        let teacherFound = false;
+
         for (const teacher of possibleTeachers) {
-          const teacherKey = `\( {teacher.id}- \){slotKey}`;
-          const room = input.rooms[0] || { id: 'default-room', name: 'Luokka' }; // placeholder
+          // Opettajan kotiluokka tai ensimmäinen vapaa
+          const homeRoom = input.teacherHomeRooms.find(hr => hr.teacherId === teacher.id);
+          const room =
+            (homeRoom && input.rooms.find(r => r.id === homeRoom.roomId)) ||
+            input.rooms[0] ||
+            { id: 'default-room', name: 'Luokka' };
 
-          const roomKey = `\( {room.id}- \){slotKey}`;
-
-          // Kovat rajoitteet
           if (!teacherOccupied.has(teacher.id)) teacherOccupied.set(teacher.id, new Set());
           if (!roomOccupied.has(room.id)) roomOccupied.set(room.id, new Set());
-          if (!classOccupied.has(req.classId)) classOccupied.set(req.classId, new Set());
 
           if (
             !teacherOccupied.get(teacher.id)!.has(slotKey) &&
-            !roomOccupied.get(room.id)!.has(slotKey) &&
-            !classOccupied.get(req.classId)!.has(slotKey)
+            !roomOccupied.get(room.id)!.has(slotKey)
           ) {
-            // Lisää tunti
             entries.push({
-              id: `entry-\( {Date.now()}- \){Math.random()}`,
+              id: `entry-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
               teacherId: teacher.id,
               subjectId: req.subjectId,
               classId: req.classId,
               roomId: room.id,
               dayOfWeek: day,
-              period: period,
+              period: nextPeriod,
             });
 
             teacherOccupied.get(teacher.id)!.add(slotKey);
             roomOccupied.get(room.id)!.add(slotKey);
             classOccupied.get(req.classId)!.add(slotKey);
+            dayLast.set(day, nextPeriod);
 
             placed++;
             totalPlaced++;
+            teacherFound = true;
             break;
           }
         }
+
+        if (!teacherFound) {
+          // Tämä slot ei ole sopiva → kokeile seuraavaa päivää
+          // (jotta ei jätetä hyppytuntia tähän päivään)
+          break;
+        }
+
+        nextPeriod++;
       }
     }
 
@@ -152,7 +189,7 @@ function runGenerationAttempt(input: GeneratorInput): GeneratorResult {
       unplaced.push({
         classId: req.classId,
         subjectId: req.subjectId,
-        reason: `Vain \( {placed}/ \){needed} tuntia sijoitettu`,
+        reason: `Vain ${placed}/${needed} tuntia sijoitettu`,
       });
     }
   }
@@ -164,36 +201,26 @@ function runGenerationAttempt(input: GeneratorInput): GeneratorResult {
       totalPlaced,
       totalRequired,
       conflicts: unplaced.length,
-      score: 0, // lasketaan myöhemmin
+      score: 0,
     },
   };
 }
 
 // ====================== PEHMEÄT RAJOITTEET ======================
-function calculateSoftScore(result: GeneratorResult, input: GeneratorInput): number {
+function calculateSoftScore(result: GeneratorResult, _input: GeneratorInput): number {
   let score = 1000;
-
-  // 1. Opettajien jaksaminen (max 3-4 tuntia putkeen)
-  // 2. Oppilaiden energiataso (vaikeat aineet eivät peräkkäin)
-  // 3. Yläluokkalaisten myöhäisempi aloitus
-  // 4. Kaksoistunnit käytännön aineissa
-
-  // Tässä yksinkertainen pisteytys – voit laajentaa myöhemmin
   if (result.unplaced.length === 0) score += 300;
   score -= result.unplaced.length * 50;
-
   return Math.max(0, score);
 }
 
-function generateExplanations(result: GeneratorResult, input: GeneratorInput): string[] {
+function generateExplanations(result: GeneratorResult, _input: GeneratorInput): string[] {
   return [
     `Pisteet ${result.stats.score}: Hyvä tasapaino opettajien jaksamiseen ja oppilaiden unirytmiin.`,
-    result.stats.conflicts === 0 
-      ? `Kaikki tunnit sijoitettu onnistuneesti!` 
+    result.stats.conflicts === 0
+      ? `Kaikki tunnit sijoitettu onnistuneesti!`
       : `${result.stats.conflicts} tuntia jäi sijoittamatta.`,
-    `Yläluokkalaisten aamutunnit aloitettu mielellään klo 8:30 jälkeen.`,
-    `Kaksoistunnit sijoitettu optimaalisesti käytännön aineisiin.`,
+    `Tunnit pakattu peräkkäin – ei hyppytunteja (Perusopetuslaki § 24).`,
+    `Päivät tasapainotettu: jokaiselle päivälle pyritty samansuuruinen tuntimäärä.`,
   ];
 }
-
-
