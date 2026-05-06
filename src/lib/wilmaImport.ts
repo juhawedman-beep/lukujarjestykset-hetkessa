@@ -130,8 +130,9 @@ export async function parseWilmaCsv(file: File): Promise<ParseResult> {
   };
 
   if (format === 'unknown') {
+    const found = headers.length > 0 ? headers.join(', ') : '(ei otsikoita)';
     warnings.push(
-      'Sarakkeita ei tunnistettu. Tuetut otsikot: Luokka, Vuosiluokka, Oppilasmäärä, Etunimi, Sukunimi, Aineet, Aine, Tunnit.'
+      `Sarakkeita ei tunnistettu. Tiedostossa olevat otsikot: ${found}. Tuetut otsikot mm.: Luokka, Vuosiluokka, Oppilasmäärä, Etunimi, Sukunimi, Aineet, Aine/Oppiaine, Tunnit/VVT/Viikkotunnit.`
     );
     return result;
   }
