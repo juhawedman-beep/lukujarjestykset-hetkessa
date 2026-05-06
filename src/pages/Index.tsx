@@ -1,54 +1,60 @@
 // src/pages/Index.tsx
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import GeneratorDialog from '@/components/GeneratorDialog';
 import TimetableGrid from '@/components/TimetableGrid';
-import { fetchAllData, seedDemoDataIfEmpty, saveTimetableEntries } from '@/lib/timetableData';
-import type { Teacher, SchoolClass, Subject, Room, TimetableEntry } from '@/types/timetable';
-import { toast } from '@/hooks/use-toast';
-import { Wand2, RefreshCw } from 'lucide-react';
+import {
+  useSubjects,
+  useTeachers,
+  useSchoolClasses,
+  useRooms,
+} from '@/hooks/useSchoolData';
+import {
+  useActiveTimetable,
+  useTimetableEntries,
+  useSaveTimetable,
+} from '@/hooks/useTimetable';
+import type { TimetableEntry } from '@/types/timetable';
+import { RefreshCw } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function Index() {
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [classes, setClasses] = useState<SchoolClass[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [timetableEntries, setTimetableEntries] = useState<TimetableEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      await seedDemoDataIfEmpty();
-      const data = await fetchAllData();
-      setTeachers(data.teachers);
-      setClasses(data.classes);
-      setSubjects(data.subjects);
-      setRooms(data.rooms);
-    } catch (error) {
-      console.error(error);
-      toast({ title: 'Virhe', description: 'Datan lataus epäonnistui', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const subjectsQ = useSubjects();
+  const teachersQ = useTeachers();
+  const classesQ = useSchoolClasses();
+  const roomsQ = useRooms();
+
+  const activeTtQ = useActiveTimetable();
+  const entriesQ = useTimetableEntries(activeTtQ.data?.id);
+  const saveTimetable = useSaveTimetable();
+
+  // Local working copy for drag-and-drop edits before saving.
+  const [workingEntries, setWorkingEntries] = useState<TimetableEntry[]>([]);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (entriesQ.data) setWorkingEntries(entriesQ.data);
+  }, [entriesQ.data]);
 
-  const handleGenerated = async (newEntries: TimetableEntry[]) => {
-    setTimetableEntries(newEntries);
-    const success = await saveTimetableEntries(newEntries);
-    if (success) {
-      toast({ title: '✅ Lukujärjestys tallennettu Supabaseen' });
-    }
+  const loading =
+    subjectsQ.isLoading ||
+    teachersQ.isLoading ||
+    classesQ.isLoading ||
+    roomsQ.isLoading ||
+    activeTtQ.isLoading;
+
+  const handleRefresh = () => {
+    qc.invalidateQueries();
+  };
+
+  const handleGenerated = (newEntries: TimetableEntry[]) => {
+    setWorkingEntries(newEntries);
+    saveTimetable.mutate({ entries: newEntries });
   };
 
   const handleGridUpdate = (updatedEntries: TimetableEntry[]) => {
-    setTimetableEntries(updatedEntries);
-    // Voit tallentaa automaattisesti tai lisätä "Tallenna muutokset" -napin
+    setWorkingEntries(updatedEntries);
   };
 
   if (loading) {
@@ -63,19 +69,23 @@ export default function Index() {
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-8 p-6 rounded-2xl bg-gradient-hero text-primary-foreground shadow-elegant">
         <div>
-          <h1 className="text-4xl font-display font-bold tracking-tight">Lukujärjestykset hetkessä</h1>
-          <p className="text-primary-foreground/80 mt-1">Älykäs generointi + muokattava kalenteri</p>
+          <h1 className="text-4xl font-display font-bold tracking-tight">
+            Lukujärjestykset hetkessä
+          </h1>
+          <p className="text-primary-foreground/80 mt-1">
+            Älykäs generointi + muokattava kalenteri
+          </p>
         </div>
         <div className="flex gap-3">
-          <Button onClick={loadData} variant="outline" size="sm">
+          <Button onClick={handleRefresh} variant="outline" size="sm">
             <RefreshCw className="w-4 h-4 mr-2" />
             Päivitä data
           </Button>
           <GeneratorDialog
-            classes={classes}
-            teachers={teachers}
-            subjects={subjects}
-            rooms={rooms}
+            classes={classesQ.data ?? []}
+            teachers={teachersQ.data ?? []}
+            subjects={subjectsQ.data ?? []}
+            rooms={roomsQ.data ?? []}
             periodsPerDay={8}
             onGenerated={handleGenerated}
           />
@@ -83,17 +93,17 @@ export default function Index() {
       </div>
 
       <TimetableGrid
-        entries={timetableEntries}
-        teachers={teachers}
-        classes={classes}
-        subjects={subjects}
-        rooms={rooms}
+        entries={workingEntries}
+        teachers={teachersQ.data ?? []}
+        classes={classesQ.data ?? []}
+        subjects={subjectsQ.data ?? []}
+        rooms={roomsQ.data ?? []}
         periodsPerDay={8}
         onUpdate={handleGridUpdate}
       />
 
       <div className="mt-8 text-center text-xs text-muted-foreground">
-        Supabase • Drag & Drop • Kurre-vienti • Valmis testaukseen
+        Lovable Cloud • Drag & Drop • Kurre-vienti • Valmis testaukseen
       </div>
     </div>
   );
