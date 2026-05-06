@@ -1,108 +1,13 @@
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    /* Navy Trust palette: #0f1b3d, #1e3a5f, #3b6fa0, #e8edf3 */
-    --background: 220 30% 97%;
-    --foreground: 222 60% 15%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222 60% 15%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 60% 15%;
-
-    --primary: 222 60% 15%;             /* deep navy #0f1b3d */
-    --primary-foreground: 215 30% 94%;  /* #e8edf3 */
-
-    --secondary: 215 30% 94%;           /* light steel #e8edf3 */
-    --secondary-foreground: 222 60% 15%;
-
-    --muted: 216 25% 92%;
-    --muted-foreground: 218 20% 40%;
-
-    --accent: 210 47% 43%;              /* sky navy #3b6fa0 */
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 75% 50%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 216 25% 86%;
-    --input: 216 25% 86%;
-    --ring: 210 47% 43%;
-
-    --radius: 0.75rem;
-
-    /* Brand gradients & shadows */
-    --gradient-hero: linear-gradient(135deg, hsl(222 60% 15%) 0%, hsl(215 50% 25%) 50%, hsl(210 47% 43%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(220 30% 97%) 0%, hsl(215 30% 94%) 100%);
-    --shadow-elegant: 0 10px 30px -12px hsl(222 60% 15% / 0.18);
-    --shadow-card: 0 1px 3px hsl(222 60% 15% / 0.06), 0 4px 12px hsl(222 60% 15% / 0.04);
-
-    /* Conflict highlight */
-    --conflict: 0 75% 50%;
-    --conflict-soft: 0 90% 96%;
-
-    /* Subject category colors */
-    --subject-arts: 340 75% 55%;
-    --subject-sports: 142 60% 45%;
-    --subject-theory: 217 80% 55%;
-    --subject-languages: 262 60% 55%;
-    --subject-math: 25 90% 55%;
-    --subject-science: 190 70% 45%;
-    --subject-free: 210 15% 80%;
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 220 20% 8%;
-    --foreground: 210 20% 95%;
-    --card: 220 20% 11%;
-    --card-foreground: 210 20% 95%;
-    --popover: 220 20% 11%;
-    --popover-foreground: 210 20% 95%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 217 20% 18%;
-    --secondary-foreground: 210 20% 90%;
-    --muted: 217 20% 16%;
-    --muted-foreground: 215 15% 55%;
-    --accent: 170 65% 50%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217 20% 20%;
-    --input: 217 20% 20%;
-    --ring: 217 91% 60%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
+:root {
+  --primary: 30 58 138;   /* navy */
+  --background: 240 10 98;
+  --foreground: 222 47 11;
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground font-sans antialiased;
-  }
+body {
+  font-feature-settings: "kern" 1, "tnum" 1;
 }
