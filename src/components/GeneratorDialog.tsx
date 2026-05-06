@@ -190,9 +190,14 @@ export default function GeneratorDialog({
                   <Calendar className="w-4 h-4" />
                   Viikkotunnit per luokka ja aine
                 </h3>
-                <Button variant="outline" size="sm" onClick={handleFillOPS} className="gap-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleFillOPS}
+                  className="gap-2 bg-primary hover:bg-primary/90"
+                >
                   <BookOpen className="w-4 h-4" />
-                  Täytä OPS 2014:n mukaan
+                  Täytä OPS-tuntijako automaattisesti
                 </Button>
               </div>
               <Table>
