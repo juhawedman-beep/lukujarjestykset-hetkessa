@@ -196,4 +196,4 @@ function generateExplanations(result: GeneratorResult, input: GeneratorInput): s
   ];
 }
 
-export { generateTimetable };
+
