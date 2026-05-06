@@ -1,60 +1,69 @@
 // src/pages/Index.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import GeneratorDialog from '@/components/GeneratorDialog';
 import TimetableGrid from '@/components/TimetableGrid';
-import {
-  useSubjects,
-  useTeachers,
-  useSchoolClasses,
-  useRooms,
-} from '@/hooks/useSchoolData';
-import {
-  useActiveTimetable,
-  useTimetableEntries,
-  useSaveTimetable,
-} from '@/hooks/useTimetable';
-import type { TimetableEntry } from '@/types/timetable';
-import { RefreshCw } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import WellbeingIndex from '@/components/WellbeingIndex';
+import { fetchAllData, seedDemoDataIfEmpty, saveTimetableEntries } from '@/lib/timetableData';
+import type { Teacher, SchoolClass, Subject, Room, TimetableEntry } from '@/types/timetable';
+import { toast } from '@/hooks/use-toast';
+import { Wand2, RefreshCw, Save } from 'lucide-react';
 
 export default function Index() {
-  const qc = useQueryClient();
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [classes, setClasses] = useState<SchoolClass[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [timetableEntries, setTimetableEntries] = useState<TimetableEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const subjectsQ = useSubjects();
-  const teachersQ = useTeachers();
-  const classesQ = useSchoolClasses();
-  const roomsQ = useRooms();
-
-  const activeTtQ = useActiveTimetable();
-  const entriesQ = useTimetableEntries(activeTtQ.data?.id);
-  const saveTimetable = useSaveTimetable();
-
-  // Local working copy for drag-and-drop edits before saving.
-  const [workingEntries, setWorkingEntries] = useState<TimetableEntry[]>([]);
-
-  useEffect(() => {
-    if (entriesQ.data) setWorkingEntries(entriesQ.data);
-  }, [entriesQ.data]);
-
-  const loading =
-    subjectsQ.isLoading ||
-    teachersQ.isLoading ||
-    classesQ.isLoading ||
-    roomsQ.isLoading ||
-    activeTtQ.isLoading;
-
-  const handleRefresh = () => {
-    qc.invalidateQueries();
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      await seedDemoDataIfEmpty();
+      const data = await fetchAllData();
+      setTeachers(data.teachers);
+      setClasses(data.classes);
+      setSubjects(data.subjects);
+      setRooms(data.rooms);
+    } catch (error) {
+      console.error(error);
+      toast({ title: 'Virhe', description: 'Datan lataus epäonnistui', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // Automaattinen tallennus kun aikataulu muuttuu
+  const autoSave = useCallback(async (entries: TimetableEntry[]) => {
+    if (entries.length === 0) return;
+    setSaving(true);
+    const success = await saveTimetableEntries(entries);
+    setSaving(false);
+    if (!success) {
+      toast({ title: 'Tallennusvirhe', description: 'Muutoksia ei pystytty tallentamaan', variant: 'destructive' });
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Tallennus debounce 800ms
+  useEffect(() => {
+    const timeout = setTimeout(() => autoSave(timetableEntries), 800);
+    return () => clearTimeout(timeout);
+  }, [timetableEntries, autoSave]);
+
   const handleGenerated = (newEntries: TimetableEntry[]) => {
-    setWorkingEntries(newEntries);
-    saveTimetable.mutate({ entries: newEntries });
+    setTimetableEntries(newEntries);
+    toast({ title: '✅ Lukujärjestys generoitu ja tallennettu' });
   };
 
   const handleGridUpdate = (updatedEntries: TimetableEntry[]) => {
-    setWorkingEntries(updatedEntries);
+    setTimetableEntries(updatedEntries);
   };
 
   if (loading) {
@@ -67,43 +76,54 @@ export default function Index() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-8 p-6 rounded-2xl bg-gradient-hero text-primary-foreground shadow-elegant">
+      <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-4xl font-display font-bold tracking-tight">
-            Lukujärjestykset hetkessä
-          </h1>
-          <p className="text-primary-foreground/80 mt-1">
-            Älykäs generointi + muokattava kalenteri
-          </p>
+          <h1 className="text-4xl font-bold tracking-tight">Lukujärjestykset hetkessä</h1>
+          <p className="text-muted-foreground">Automaattinen tallennus Supabaseen aktiivinen</p>
         </div>
-        <div className="flex gap-3">
-          <Button onClick={handleRefresh} variant="outline" size="sm">
+        <div className="flex items-center gap-3">
+          <Button onClick={loadData} variant="outline" size="sm">
             <RefreshCw className="w-4 h-4 mr-2" />
             Päivitä data
           </Button>
           <GeneratorDialog
-            classes={classesQ.data ?? []}
-            teachers={teachersQ.data ?? []}
-            subjects={subjectsQ.data ?? []}
-            rooms={roomsQ.data ?? []}
+            classes={classes}
+            teachers={teachers}
+            subjects={subjects}
+            rooms={rooms}
             periodsPerDay={8}
             onGenerated={handleGenerated}
           />
         </div>
       </div>
 
-      <TimetableGrid
-        entries={workingEntries}
-        teachers={teachersQ.data ?? []}
-        classes={classesQ.data ?? []}
-        subjects={subjectsQ.data ?? []}
-        rooms={roomsQ.data ?? []}
-        periodsPerDay={8}
-        onUpdate={handleGridUpdate}
-      />
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        <div className="xl:col-span-8">
+          <TimetableGrid
+            entries={timetableEntries}
+            teachers={teachers}
+            classes={classes}
+            subjects={subjects}
+            rooms={rooms}
+            periodsPerDay={8}
+            onUpdate={handleGridUpdate}
+          />
+        </div>
 
-      <div className="mt-8 text-center text-xs text-muted-foreground">
-        Lovable Cloud • Drag & Drop • Kurre-vienti • Valmis testaukseen
+        <div className="xl:col-span-4 space-y-6">
+          <WellbeingIndex
+            entries={timetableEntries}
+            teachers={teachers}
+            classes={classes}
+          />
+
+          {saving && (
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Save className="w-4 h-4 animate-pulse" />
+              Tallennetaan muutoksia...
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
