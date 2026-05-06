@@ -165,6 +165,13 @@ export default function WilmaImportDialog({ onImported }: Props) {
       toast.success(
         `Tuonti valmis: ${classCount} luokkaa, ${teacherCount} opettajaa, ${reqCount} tuntivaatimusta.`
       );
+      // Refresh all school data caches so views update immediately
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: QK.subjects }),
+        queryClient.invalidateQueries({ queryKey: QK.teachers }),
+        queryClient.invalidateQueries({ queryKey: QK.classes }),
+        queryClient.invalidateQueries({ queryKey: QK.requirements }),
+      ]);
       onImported?.();
       setOpen(false);
       reset();
