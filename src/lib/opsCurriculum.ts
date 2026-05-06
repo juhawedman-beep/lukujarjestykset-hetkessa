@@ -1,5 +1,6 @@
 // src/lib/opsCurriculum.ts
-import type { LessonRequirement, SchoolClass, Subject } from '@/types/timetable';
+import type { SchoolClass, Subject } from '@/types/timetable';
+import type { LessonRequirement } from '@/lib/timetableGenerator';
 
 /**
  * OPS 2014 -mukaisten tuntimäärien pohja (yksinkertaistettu, mutta realistinen)
@@ -27,7 +28,7 @@ export function generateOPSRequirements(
   schoolClass: SchoolClass,
   subjects: Subject[]
 ): LessonRequirement[] {
-  const level = schoolClass.level || 7; // default yläluokka
+  const level = schoolClass.gradeLevel || 7; // default yläluokka
   const hoursMap = OPS_HOURS[level] || OPS_HOURS[7];
 
   return subjects
@@ -57,4 +58,4 @@ export function importRequirementsFromWilma(csvData: string): LessonRequirement[
   return [];
 }
 
-export { generateOPSRequirements };
+
