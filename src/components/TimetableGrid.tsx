@@ -186,7 +186,6 @@ export default function TimetableGrid({
                         </div>
                         );
                       })}
-                      ))}
 
                       {slotEntries.length === 0 && (
                         <div className="h-20 flex items-center justify-center text-xs text-muted-foreground border border-dashed rounded-xl">
