@@ -16,6 +16,7 @@ import RoomView from '@/components/RoomView';
 import WorkloadAnalysis from '@/components/WorkloadAnalysis';
 import PrintTimetable, { triggerPrint } from '@/components/PrintTimetable';
 import GeneratorDialog from '@/components/GeneratorDialog';
+import UserMenu from '@/components/UserMenu';
 import { GraduationCap, Calendar, User, Users, AlertTriangle, Printer, DoorOpen, BarChart3, Undo2, Redo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
@@ -216,6 +217,7 @@ export default function Index() {
             />
             <RoomManagementDialog rooms={rooms} onSave={setRooms} />
             <SettingsDialog settings={settings} onSave={setSettings} />
+            <UserMenu />
             <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
               <Calendar className="w-4 h-4" aria-hidden="true" />
               <span>Kevät 2026</span>
