@@ -44,7 +44,7 @@ export function useTimetableEntries(timetableId: string | undefined) {
         roomId: e.room_id,
         dayOfWeek: e.day_of_week,
         period: e.period,
-        additionalTeachers: (e.additional_teachers as AdditionalTeacher[] | null) ?? undefined,
+        additionalTeachers: (e.additional_teachers as unknown as AdditionalTeacher[] | null) ?? undefined,
       }));
     },
   });
@@ -97,7 +97,7 @@ export function useSaveTimetable() {
           room_id: e.roomId,
           day_of_week: e.dayOfWeek,
           period: e.period,
-          additional_teachers: (e.additionalTeachers ?? []) as unknown as object,
+          additional_teachers: (e.additionalTeachers ?? []) as never,
         }));
         const { error } = await supabase.from('timetable_entries').insert(rows);
         if (error) throw error;
