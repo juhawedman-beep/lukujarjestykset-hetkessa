@@ -207,10 +207,44 @@ function runGenerationAttempt(input: GeneratorInput, attemptSeed = 0): Generator
 }
 
 // ====================== PEHMEÄT RAJOITTEET ======================
-function calculateSoftScore(result: GeneratorResult, _input: GeneratorInput): number {
+function calculateSoftScore(result: GeneratorResult, input: GeneratorInput): number {
   let score = 1000;
+
+  // Perus: kaikki sijoitettu
   if (result.unplaced.length === 0) score += 300;
   score -= result.unplaced.length * 50;
+
+  // 1. Opettajille max 3 peräkkäistä tuntia (sakko jokaisesta ylityksestä)
+  const teacherDayPeriods = new Map<string, Map<number, number[]>>();
+  for (const e of result.entries) {
+    if (!teacherDayPeriods.has(e.teacherId)) teacherDayPeriods.set(e.teacherId, new Map());
+    const dayMap = teacherDayPeriods.get(e.teacherId)!;
+    if (!dayMap.has(e.dayOfWeek)) dayMap.set(e.dayOfWeek, []);
+    dayMap.get(e.dayOfWeek)!.push(e.period);
+  }
+  for (const dayMap of teacherDayPeriods.values()) {
+    for (const periods of dayMap.values()) {
+      const sorted = [...periods].sort((a, b) => a - b);
+      let streak = 1;
+      for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i] === sorted[i - 1] + 1) {
+          streak++;
+          if (streak > 3) score -= 40; // sakko jokaisesta yli 3:n peräkkäisestä
+        } else {
+          streak = 1;
+        }
+      }
+    }
+  }
+
+  // 2. Yläluokat (gradeLevel >= 7): mieluiten ei ekaa periodia
+  const upperClassIds = new Set(input.classes.filter(c => c.gradeLevel >= 7).map(c => c.id));
+  for (const e of result.entries) {
+    if (upperClassIds.has(e.classId) && e.period === 1) {
+      score -= 15; // pieni sakko liian aikaisesta aloituksesta
+    }
+  }
+
   return Math.max(0, score);
 }
 
