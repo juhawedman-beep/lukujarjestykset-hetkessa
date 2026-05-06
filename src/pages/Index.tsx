@@ -44,36 +44,4 @@ export default function Index() {
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-bold">Lukujärjestykset hetkessä</h1>
-        <div className="flex gap-3">
-          <Button onClick={loadData} variant="outline">
-            Päivitä data
-          </Button>
-          <GeneratorDialog
-            classes={classes}
-            teachers={teachers}
-            subjects={subjects}
-            rooms={rooms}
-            periodsPerDay={8} // muokkaa tarpeen mukaan
-            onGenerated={handleGenerated}
-          />
-        </div>
-      </div>
-
-      {/* Tässä voit lisätä kalenterinäkymän myöhemmin */}
-      <div className="bg-card p-6 rounded-2xl border">
-        <h2 className="text-2xl font-semibold mb-4">Nykyinen lukujärjestys</h2>
-        <p className="text-muted-foreground">
-          Generoitu lukujärjestys näkyy täällä. (Drag & drop tulee seuraavaksi)
-        </p>
-        <pre className="mt-4 text-xs bg-muted p-4 rounded-xl overflow-auto">
-          {timetableEntries.length} tuntia generoitu
-        </pre>
-      </div>
-
-      <div className="mt-8 text-sm text-muted-foreground">
-        Opettajia: {teachers.length} | Luokkia: {classes.length} | Aineita: {subjects.length}
-      </div>
-    </div>
-  );
-}
+        <h1 className="text- 
