@@ -27,11 +27,12 @@ import { useActiveTimetable, useTimetableEntries, useSaveTimetable } from '@/hoo
 import AddClassDialog from '@/components/AddClassDialog';
 import AddTeacherDialog from '@/components/AddTeacherDialog';
 
-type ViewMode = 'teacher' | 'class' | 'rooms' | 'workload' | 'conflicts';
+type ViewMode = 'teacher' | 'class' | 'student' | 'rooms' | 'workload' | 'conflicts';
 
 const VIEW_TABS: { mode: ViewMode; icon: typeof User; label: string }[] = [
   { mode: 'teacher', icon: User, label: 'Opettajat' },
   { mode: 'class', icon: Users, label: 'Luokat' },
+  { mode: 'student', icon: GraduationCap, label: 'Oppilaat' },
   { mode: 'rooms', icon: DoorOpen, label: 'Tilat' },
   { mode: 'workload', icon: BarChart3, label: 'Kuormitus' },
   { mode: 'conflicts', icon: AlertTriangle, label: 'Tarkistukset' },
