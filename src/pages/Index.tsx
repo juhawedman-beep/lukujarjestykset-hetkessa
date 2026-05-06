@@ -61,10 +61,10 @@ export default function Index() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-8 p-6 rounded-2xl bg-gradient-hero text-primary-foreground shadow-elegant">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight">Lukujärjestykset hetkessä</h1>
-          <p className="text-muted-foreground">Älykäs generointi + muokattava kalenteri</p>
+          <h1 className="text-4xl font-display font-bold tracking-tight">Lukujärjestykset hetkessä</h1>
+          <p className="text-primary-foreground/80 mt-1">Älykäs generointi + muokattava kalenteri</p>
         </div>
         <div className="flex gap-3">
           <Button onClick={loadData} variant="outline" size="sm">
