@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,35 +6,46 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 220 25% 10%;
+    /* Navy Trust palette: #0f1b3d, #1e3a5f, #3b6fa0, #e8edf3 */
+    --background: 220 30% 97%;
+    --foreground: 222 60% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 25% 10%;
+    --card-foreground: 222 60% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 10%;
+    --popover-foreground: 222 60% 15%;
 
-    --primary: 217 91% 50%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 222 60% 15%;             /* deep navy #0f1b3d */
+    --primary-foreground: 215 30% 94%;  /* #e8edf3 */
 
-    --secondary: 210 20% 94%;
-    --secondary-foreground: 220 25% 20%;
+    --secondary: 215 30% 94%;           /* light steel #e8edf3 */
+    --secondary-foreground: 222 60% 15%;
 
-    --muted: 210 15% 93%;
-    --muted-foreground: 215 15% 47%;
+    --muted: 216 25% 92%;
+    --muted-foreground: 218 20% 40%;
 
-    --accent: 170 65% 45%;
+    --accent: 210 47% 43%;              /* sky navy #3b6fa0 */
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 75% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 20% 88%;
-    --input: 214 20% 88%;
-    --ring: 217 91% 50%;
+    --border: 216 25% 86%;
+    --input: 216 25% 86%;
+    --ring: 210 47% 43%;
 
-    --radius: 0.625rem;
+    --radius: 0.75rem;
+
+    /* Brand gradients & shadows */
+    --gradient-hero: linear-gradient(135deg, hsl(222 60% 15%) 0%, hsl(215 50% 25%) 50%, hsl(210 47% 43%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(220 30% 97%) 0%, hsl(215 30% 94%) 100%);
+    --shadow-elegant: 0 10px 30px -12px hsl(222 60% 15% / 0.18);
+    --shadow-card: 0 1px 3px hsl(222 60% 15% / 0.06), 0 4px 12px hsl(222 60% 15% / 0.04);
+
+    /* Conflict highlight */
+    --conflict: 0 75% 50%;
+    --conflict-soft: 0 90% 96%;
 
     /* Subject category colors */
     --subject-arts: 340 75% 55%;
