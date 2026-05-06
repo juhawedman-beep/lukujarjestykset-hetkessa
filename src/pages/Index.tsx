@@ -26,6 +26,8 @@ import { useSaveRooms } from '@/hooks/useRooms';
 import { useActiveTimetable, useTimetableEntries, useSaveTimetable } from '@/hooks/useTimetable';
 import AddClassDialog from '@/components/AddClassDialog';
 import AddTeacherDialog from '@/components/AddTeacherDialog';
+import AddStudentDialog from '@/components/AddStudentDialog';
+import StudentView from '@/components/StudentView';
 
 type ViewMode = 'teacher' | 'class' | 'student' | 'rooms' | 'workload' | 'conflicts';
 
@@ -270,6 +272,7 @@ export default function Index() {
             )}
             <AddClassDialog />
             <AddTeacherDialog />
+            <AddStudentDialog />
             <RoomManagementDialog rooms={rooms} onSave={(r) => { setRooms(r); saveRooms.mutate(r); }} />
             <WilmaImportDialog />
             <SettingsDialog settings={settings} onSave={setSettings} />
