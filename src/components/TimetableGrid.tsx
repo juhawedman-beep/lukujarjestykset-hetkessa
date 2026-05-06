@@ -1,12 +1,10 @@
- // src/components/TimetableGrid.tsx
+// src/components/TimetableGrid.tsx
 import { useState, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, GripVertical, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Trash2, GripVertical } from 'lucide-react';
 import type { TimetableEntry, Teacher, SchoolClass, Subject, Room } from '@/types/timetable';
-import { detectConflicts, type ConflictWarning } from '@/lib/timetableValidation';
-import { cn } from '@/lib/utils';
 
 interface TimetableGridProps {
   entries: TimetableEntry[];
@@ -31,30 +29,48 @@ export default function TimetableGrid({
 }: TimetableGridProps) {
   const [draggedEntry, setDraggedEntry] = useState<TimetableEntry | null>(null);
 
-  // Calculate conflicts for current entries (memoized)
-  const conflicts = useMemo<ConflictWarning[]>(
-    () => detectConflicts(entries, teachers, rooms),
-    [entries, teachers, rooms]
-  );
+  // Konfliktien tunnistus (hyppytunnit + päällekkäisyydet)
+  const conflicts = useMemo(() => {
+    const classSchedule = new Map<string, number[]>();
+    const teacherSchedule = new Map<string, number[]>();
 
-  // Map entryId -> conflicts (for cell highlighting + tooltip)
-  const conflictsByEntry = useMemo(() => {
-    const map = new Map<string, ConflictWarning[]>();
-    for (const c of conflicts) {
-      for (const id of c.entryIds) {
-        if (!map.has(id)) map.set(id, []);
-        map.get(id)!.push(c);
+    entries.forEach(entry => {
+      const slotKey = entry.dayOfWeek * 10 + entry.period;
+
+      // Luokan aikataulu
+      if (!classSchedule.has(entry.classId)) classSchedule.set(entry.classId, []);
+      classSchedule.get(entry.classId)!.push(slotKey);
+
+      // Opettajan aikataulu
+      if (!teacherSchedule.has(entry.teacherId)) teacherSchedule.set(entry.teacherId, []);
+      teacherSchedule.get(entry.teacherId)!.push(slotKey);
+    });
+
+    const conflictSlots = new Set<string>();
+
+    // Tarkista hyppytunnit luokalle
+    for (const [classId, slots] of classSchedule) {
+      slots.sort((a, b) => a - b);
+      for (let i = 1; i < slots.length; i++) {
+        const prevDay = Math.floor(slots[i-1] / 10);
+        const currDay = Math.floor(slots[i] / 10);
+        const prevPeriod = slots[i-1] % 10;
+        const currPeriod = slots[i] % 10;
+
+        if (prevDay === currDay && currPeriod > prevPeriod + 1) {
+          conflictSlots.add(`${classId}-${slots[i]}`);
+        }
       }
     }
-    return map;
-  }, [conflicts]);
 
-  const errorCount = conflicts.filter(c => c.severity === 'error').length;
+    return conflictSlots;
+  }, [entries]);
 
   const getTeacherName = (id: string) => {
     const t = teachers.find(t => t.id === id);
     return t ? `${t.firstName} ${t.lastName}` : id;
   };
+
   const getSubjectName = (id: string) => subjects.find(s => s.id === id)?.name || id;
   const getClassName = (id: string) => classes.find(c => c.id === id)?.name || id;
   const getRoomName = (id: string) => rooms.find(r => r.id === id)?.name || id;
@@ -85,24 +101,21 @@ export default function TimetableGrid({
     onUpdate(entries.filter(e => e.id !== id));
   };
 
+  const isConflict = (entry: TimetableEntry) => {
+    const slotKey = `${entry.classId}-${entry.dayOfWeek * 10 + entry.period}`;
+    return conflicts.has(slotKey);
+  };
+
   return (
-    <Card className="w-full shadow-card border-border/60">
-      <CardHeader className="bg-gradient-subtle rounded-t-lg">
-        <CardTitle className="flex items-center justify-between font-display">
-          <span>Viikkokalenteri – raahaa tunteja vapaasti</span>
-          <div className="flex items-center gap-2">
-            {errorCount > 0 && (
-              <Badge variant="destructive" className="gap-1">
-                <AlertTriangle className="w-3 h-3" />
-                {errorCount} konflikti{errorCount === 1 ? '' : 'a'}
-              </Badge>
-            )}
-            <Badge variant="outline">{entries.length} tuntia</Badge>
-          </div>
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          Viikkokalenteri – raahaa tunteja
+          <Badge variant="outline">{entries.length} tuntia</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="overflow-x-auto">
-        <table className="w-full border-collapse min-w-[800px]">
+        <table className="w-full border-collapse min-w-[850px]">
           <thead>
             <tr className="bg-muted">
               <th className="p-3 border text-left w-32">Tunti / Päivä</th>
@@ -120,70 +133,55 @@ export default function TimetableGrid({
                 {DAYS.map((_, dayIndex) => {
                   const day = dayIndex + 1;
                   const slotEntries = entries.filter(e => e.dayOfWeek === day && e.period === p + 1);
-                  const slotHasConflict = slotEntries.some(e => conflictsByEntry.has(e.id));
 
                   return (
                     <td
                       key={day}
-                      className={cn(
-                        "p-2 border min-h-[110px] align-top transition-colors",
-                        slotHasConflict
-                          ? "bg-conflict-soft hover:bg-conflict-soft"
-                          : "hover:bg-muted/30"
-                      )}
+                      className="p-2 border min-h-[120px] align-top hover:bg-muted/30 transition-colors"
                       onDragOver={handleDragOver}
                       onDrop={e => handleDrop(e, day, p + 1)}
                     >
                       {slotEntries.map(entry => {
-                        const entryConflicts = conflictsByEntry.get(entry.id);
-                        const hasConflict = !!entryConflicts?.length;
+                        const conflict = isConflict(entry);
                         return (
-                        <div
-                          key={entry.id}
-                          draggable
-                          onDragStart={e => handleDragStart(e, entry)}
-                          title={entryConflicts?.map(c => c.message).join('\n')}
-                          className={cn(
-                            "border rounded-xl p-3 mb-2 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md transition-all group relative",
-                            hasConflict
-                              ? "bg-conflict-soft border-conflict ring-2 ring-conflict/50 animate-pulse"
-                              : "bg-card border-border"
-                          )}
-                        >
-                          <div className="flex items-start gap-2">
-                            {hasConflict ? (
-                              <AlertTriangle className="w-4 h-4 text-conflict mt-0.5 flex-shrink-0" />
-                            ) : (
+                          <div
+                            key={entry.id}
+                            draggable
+                            onDragStart={e => handleDragStart(e, entry)}
+                            className={`border-2 rounded-xl p-3 mb-2 shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md transition-all group relative ${
+                              conflict 
+                                ? 'border-red-500 bg-red-50 dark:bg-red-950/30' 
+                                : 'border-border bg-card'
+                            }`}
+                          >
+                            <div className="flex items-start gap-2">
                               <GripVertical className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <div className="font-semibold text-sm truncate">
-                                {getClassName(entry.classId)} – {getSubjectName(entry.subjectId)}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {getTeacherName(entry.teacherId)}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {getRoomName(entry.roomId)}
-                              </div>
-                              {hasConflict && (
-                                <div className="mt-1 text-xs text-conflict font-medium">
-                                  {entryConflicts![0].type === 'teacher_conflict'
-                                    ? 'Opettajan päällekkäisyys'
-                                    : 'Tilan päällekkäisyys'}
+                              <div className="flex-1 min-w-0">
+                                <div className="font-semibold text-sm truncate">
+                                  {getClassName(entry.classId)} – {getSubjectName(entry.subjectId)}
                                 </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {getTeacherName(entry.teacherId)}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {getRoomName(entry.roomId)}
+                                </div>
+                              </div>
+
+                              {conflict && (
+                                <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5" />
                               )}
+
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 opacity-0 group-hover:opacity-100 absolute top-2 right-2"
+                                onClick={() => removeEntry(entry.id)}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 opacity-0 group-hover:opacity-100 absolute top-2 right-2"
-                              onClick={() => removeEntry(entry.id)}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
                           </div>
-                        </div>
                         );
                       })}
 
