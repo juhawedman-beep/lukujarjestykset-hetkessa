@@ -6,13 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Wand2, CheckCircle2, AlertTriangle, Loader2, Download } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Wand2, CheckCircle2, AlertTriangle, Loader2, Download, Calendar } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import type { Subject, Teacher, SchoolClass, Room, TimetableEntry } from '@/types/timetable';
 import {
   generateTimetable,
-  createDefaultRequirements,
-  createDefaultHomeRooms,
   type LessonRequirement,
   type TeacherHomeRoom,
   type GeneratorResult,
@@ -29,6 +28,30 @@ interface GeneratorDialogProps {
   periodsPerDay: number;
   onGenerated: (entries: TimetableEntry[]) => void;
 }
+
+// Yksinkertaiset defaultit (jos et ole vielä lisännyt generatoriin)
+const createDefaultRequirements = (classes: SchoolClass[], subjects: Subject[]): LessonRequirement[] => {
+  const reqs: LessonRequirement[] = [];
+  classes.forEach(cls => {
+    subjects.forEach(subj => {
+      if (Math.random() > 0.6) { // demo-dataa
+        reqs.push({
+          classId: cls.id,
+          subjectId: subj.id,
+          hoursPerWeek: Math.floor(Math.random() * 4) + 1,
+        });
+      }
+    });
+  });
+  return reqs;
+};
+
+const createDefaultHomeRooms = (teachers: Teacher[], rooms: Room[]): TeacherHomeRoom[] => {
+  return teachers.map(t => ({
+    teacherId: t.id,
+    roomId: rooms[0]?.id || 'default-room',
+  }));
+};
 
 export default function GeneratorDialog({
   classes,
@@ -102,6 +125,7 @@ export default function GeneratorDialog({
         requirements,
         teacherHomeRooms: homeRooms,
         periodsPerDay,
+        daysPerWeek: 5,
       };
 
       const options: GenerationOptions = {
@@ -117,9 +141,9 @@ export default function GeneratorDialog({
       setGenerating(false);
 
       if (generatedResults.length === 0) {
-        toast({ title: 'Ei tuloksia', description: 'Kokeile muuttaa asetuksia.', variant: 'destructive' });
+        toast({ title: 'Ei tuloksia', description: 'Kokeile muuttaa asetuksia tai lisää tunteja.', variant: 'destructive' });
       }
-    }, 100);
+    }, 300);
   };
 
   const selectedResult = results[selectedResultIndex] || null;
@@ -129,13 +153,13 @@ export default function GeneratorDialog({
     onGenerated(selectedResult.entries);
     setOpen(false);
     toast({
-      title: 'Lukujärjestys luotu',
+      title: 'Lukujärjestys otettu käyttöön',
       description: `\( {selectedResult.stats.totalPlaced}/ \){selectedResult.stats.totalRequired} tuntia sijoitettu onnistuneesti.`,
     });
   };
 
   const handleExport = () => {
-    if (!selectedResult || !results.length) return;
+    if (!selectedResult) return;
     downloadTimetableAsCSV(
       selectedResult,
       {
@@ -146,10 +170,10 @@ export default function GeneratorDialog({
         requirements,
         teacherHomeRooms: homeRooms,
         periodsPerDay,
-      },
+      } as any,
       `lukujarjestys-kurre-vaihtoehto-${selectedResultIndex + 1}.csv`
     );
-    toast({ title: 'CSV ladattu', description: 'Valmis Kurre/Primus/Wilma-tuontiin!' });
+    toast({ title: 'CSV ladattu!', description: 'Valmis tuontiin Kurre/Primus/Wilmaan' });
   };
 
   return (
@@ -157,24 +181,84 @@ export default function GeneratorDialog({
       <DialogTrigger asChild>
         <Button variant="default" size="sm" className="gap-1.5">
           <Wand2 className="w-4 h-4" />
-          <span className="hidden sm:inline">Generoi lukujärjestys</span>
-          <span className="sm:hidden">Generoi</span>
+          Generoi lukujärjestys
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Wand2 className="w-5 h-5 text-primary" />
-            {step === 'config' ? 'Lukujärjestyksen generointi' : 'Generoinnin tulokset'}
+            {step === 'config' ? 'Luo lukujärjestys hetkessä' : 'Valitse paras vaihtoehto'}
           </DialogTitle>
         </DialogHeader>
 
+        {/* CONFIG-VAIHE */}
         {step === 'config' && (
-          <div className="space-y-6">
-            {/* Viikkotunnit-taulukko ja kotiluokat säilyvät ennallaan */}
-            {/* ... (sama koodi kuin ennen – jätän lyhyyden vuoksi pois, mutta voit kopioida vanhasta tiedostosta jos haluat) */}
-            {/* Tässä on lyhennetty versio – korvaa tarvittaessa vanhalla config-osalla */}
+          <div className="space-y-8 py-2">
+            <div>
+              <h3 className="font-medium mb-3 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Viikkotunnit per luokka ja aine
+              </h3>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Luokka</TableHead>
+                    <TableHead>Aine</TableHead>
+                    <TableHead className="text-right">Tunnit / viikko</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {classes.flatMap(cls =>
+                    subjects.map(subj => {
+                      const hours = getReqHours(cls.id, subj.id);
+                      return (
+                        <TableRow key={`\( {cls.id}- \){subj.id}`}>
+                          <TableCell>{cls.name}</TableCell>
+                          <TableCell>{subj.name}</TableCell>
+                          <TableCell className="text-right">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={10}
+                              value={hours}
+                              onChange={e => updateReq(cls.id, subj.id, parseInt(e.target.value) || 0)}
+                              className="w-20 text-center"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Kotiluokat (yksinkertainen) */}
+            <div>
+              <h3 className="font-medium mb-3">Opettajien kotiluokat</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {teachers.map(teacher => (
+                  <div key={teacher.id} className="flex items-center gap-3">
+                    <span className="font-medium min-w-[120px]">{teacher.firstName} {teacher.lastName}</span>
+                    <Select onValueChange={roomId => updateHomeRoom(teacher.id, roomId)}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Valitse kotiluokka" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {rooms.map(room => (
+                          <SelectItem key={room.id} value={room.id}>
+                            {room.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="flex justify-end gap-3">
               <Button variant="outline" onClick={() => setOpen(false)}>
                 Peruuta
@@ -183,12 +267,12 @@ export default function GeneratorDialog({
                 {generating ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generoidaan...
+                    Generoidaan 2–3 vaihtoehtoa...
                   </>
                 ) : (
                   <>
                     <Wand2 className="w-4 h-4 mr-2" />
-                    Generoi 2–3 vaihtoehtoa
+                    Generoi vaihtoehdot
                   </>
                 )}
               </Button>
@@ -196,30 +280,35 @@ export default function GeneratorDialog({
           </div>
         )}
 
+        {/* TULOS-VAIHE */}
         {step === 'result' && selectedResult && (
           <div className="space-y-6">
             {/* Vaihtoehdot */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 overflow-x-auto pb-2">
               {results.map((res, idx) => (
                 <Button
                   key={idx}
                   variant={idx === selectedResultIndex ? 'default' : 'outline'}
                   onClick={() => setSelectedResultIndex(idx)}
-                  className="flex-1"
+                  className="flex-1 min-w-[160px]"
                 >
-                  Vaihtoehto {idx + 1} <Badge className="ml-2">{res.stats.score} pistettä</Badge>
+                  Vaihtoehto {idx + 1}
+                  <Badge variant="secondary" className="ml-2">{res.stats.score} p</Badge>
                 </Button>
               ))}
             </div>
 
             {/* Selitykset */}
             {selectedResult.explanations && (
-              <div className="bg-muted p-4 rounded-lg">
-                <h4 className="font-medium mb-2">Miksi tämä on hyvä ratkaisu?</h4>
-                <ul className="space-y-1 text-sm">
+              <div className="bg-muted/50 p-5 rounded-xl border">
+                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                  Miksi tämä on hyvä ratkaisu?
+                </h4>
+                <ul className="space-y-2 text-sm">
                   {selectedResult.explanations.map((exp, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5" />
+                    <li key={i} className="flex gap-2">
+                      <span className="text-emerald-500">✓</span>
                       {exp}
                     </li>
                   ))}
@@ -228,28 +317,28 @@ export default function GeneratorDialog({
             )}
 
             {/* Tilastot */}
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <div className="text-2xl font-bold text-primary">{selectedResult.stats.totalPlaced}</div>
-                <div className="text-xs text-muted-foreground">Tuntia sijoitettu</div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-card p-4 rounded-xl text-center border">
+                <div className="text-3xl font-bold text-primary">{selectedResult.stats.totalPlaced}</div>
+                <div className="text-sm text-muted-foreground">Tuntia sijoitettu</div>
               </div>
-              <div>
-                <div className="text-2xl font-bold">{selectedResult.stats.totalRequired}</div>
-                <div className="text-xs text-muted-foreground">Tarvittua tuntia</div>
+              <div className="bg-card p-4 rounded-xl text-center border">
+                <div className="text-3xl font-bold">{selectedResult.stats.totalRequired}</div>
+                <div className="text-sm text-muted-foreground">Tarvittua tuntia</div>
               </div>
-              <div>
-                <div className="text-2xl font-bold text-destructive">{selectedResult.stats.conflicts}</div>
-                <div className="text-xs text-muted-foreground">Konfliktia</div>
+              <div className="bg-card p-4 rounded-xl text-center border">
+                <div className="text-3xl font-bold text-orange-500">{selectedResult.stats.conflicts}</div>
+                <div className="text-sm text-muted-foreground">Konfliktia</div>
               </div>
             </div>
 
-            <div className="flex gap-3">
-              <Button onClick={handleApply} className="flex-1">
-                <CheckCircle2 className="w-4 h-4 mr-2" />
+            <div className="flex gap-3 pt-4">
+              <Button onClick={handleApply} className="flex-1 text-lg h-12">
+                <CheckCircle2 className="mr-2" />
                 Käytä tätä lukujärjestystä
               </Button>
-              <Button variant="outline" onClick={handleExport} className="flex-1 gap-2">
-                <Download className="w-4 h-4" />
+              <Button variant="outline" onClick={handleExport} className="flex-1 text-lg h-12 gap-2">
+                <Download className="w-5 h-5" />
                 Vie Kurre/Primus-formaattiin
               </Button>
             </div>
