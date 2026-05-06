@@ -51,7 +51,7 @@ export default function GeneratorDialog({
   const handleOpen = (isOpen: boolean) => {
     if (isOpen) {
       setRequirements([]);
-      setHomeRooms(teachers.map(t => ({ teacherId: t.id, roomId: rooms[0]?.id || 'default' })));
+      setHomeRooms(teachers.map(t => ({ teacherId: t.id, roomId: rooms[0]?.id || 'default-room' })));
       setStep('config');
       setResults([]);
       setSelectedResultIndex(0);
@@ -96,7 +96,7 @@ export default function GeneratorDialog({
       const imported = parseWilmaCSV(csv, classes, subjects);
       if (imported.length > 0) {
         setRequirements(imported);
-        toast({ title: '✅ Wilma-tuonti onnistui', description: `${imported.length} riviä tuotu.` });
+        toast({ title: '✅ Wilma-tuonti onnistui', description: `${imported.length} tuntivaatimusta tuotu.` });
       } else {
         toast({ title: 'Tuonti epäonnistui', description: 'Tarkista tiedoston formaatti.', variant: 'destructive' });
       }
@@ -126,7 +126,7 @@ export default function GeneratorDialog({
       setSelectedResultIndex(0);
       setStep('result');
       setGenerating(false);
-    }, 300);
+    }, 400);
   };
 
   const selectedResult = results[selectedResultIndex];
@@ -135,7 +135,7 @@ export default function GeneratorDialog({
     if (!selectedResult) return;
     onGenerated(selectedResult.entries);
     setOpen(false);
-    toast({ title: 'Lukujärjestys otettu käyttöön' });
+    toast({ title: '✅ Lukujärjestys otettu käyttöön' });
   };
 
   const handleExport = () => {
@@ -226,18 +226,80 @@ export default function GeneratorDialog({
             <div className="flex justify-end gap-3">
               <Button variant="outline" onClick={() => setOpen(false)}>Peruuta</Button>
               <Button onClick={handleGenerate} disabled={generating || totalRequired === 0}>
-                {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wand2 className="w-4 h-4 mr-2" />}
-                Generoi 2–3 vaihtoehtoa
+                {generating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generoidaan...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="w-4 h-4 mr-2" />
+                    Generoi 2–3 vaihtoehtoa
+                  </>
+                )}
               </Button>
             </div>
           </div>
         )}
 
-        {/* TULOSOSIO (sama kuin ennen) */}
+        {/* TULOSOSIO - TÄYSIN VALMIS */}
         {step === 'result' && selectedResult && (
-          <div className="space-y-6 pt-4">
-            {/* ... (vaihtoehdot, selitykset, tilastot, Käytä + Vie -napit) */}
-            {/* Voit kopioida tulososion edellisestä versiostasi jos haluat, tai kerro niin annan myös sen */}
+          <div className="space-y-6">
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {results.map((res, idx) => (
+                <Button
+                  key={idx}
+                  variant={idx === selectedResultIndex ? 'default' : 'outline'}
+                  onClick={() => setSelectedResultIndex(idx)}
+                  className="flex-1 min-w-[160px]"
+                >
+                  Vaihtoehto {idx + 1}
+                  <Badge variant="secondary" className="ml-2">{res.stats.score} p</Badge>
+                </Button>
+              ))}
+            </div>
+
+            {selectedResult.explanations && (
+              <div className="bg-muted/50 p-5 rounded-xl border">
+                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                  Miksi tämä on hyvä ratkaisu?
+                </h4>
+                <ul className="space-y-2 text-sm">
+                  {selectedResult.explanations.map((exp, i) => (
+                    <li key={i} className="flex gap-2">
+                      <span className="text-emerald-500">✓</span> {exp}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-card p-4 rounded-xl text-center border">
+                <div className="text-3xl font-bold text-primary">{selectedResult.stats.totalPlaced}</div>
+                <div className="text-sm text-muted-foreground">Tuntia sijoitettu</div>
+              </div>
+              <div className="bg-card p-4 rounded-xl text-center border">
+                <div className="text-3xl font-bold">{selectedResult.stats.totalRequired}</div>
+                <div className="text-sm text-muted-foreground">Tarvittua tuntia</div>
+              </div>
+              <div className="bg-card p-4 rounded-xl text-center border">
+                <div className="text-3xl font-bold text-orange-500">{selectedResult.stats.conflicts}</div>
+                <div className="text-sm text-muted-foreground">Konfliktia</div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button onClick={handleApply} className="flex-1 text-lg h-12">
+                <CheckCircle2 className="mr-2" />
+                Käytä tätä lukujärjestystä
+              </Button>
+              <Button variant="outline" onClick={handleExport} className="flex-1 text-lg h-12 gap-2">
+                <Download className="w-5 h-5" />
+                Vie Kurre/Primus-formaattiin
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>
