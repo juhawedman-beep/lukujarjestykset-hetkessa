@@ -26,12 +26,15 @@ import { useSaveRooms } from '@/hooks/useRooms';
 import { useActiveTimetable, useTimetableEntries, useSaveTimetable } from '@/hooks/useTimetable';
 import AddClassDialog from '@/components/AddClassDialog';
 import AddTeacherDialog from '@/components/AddTeacherDialog';
+import AddStudentDialog from '@/components/AddStudentDialog';
+import StudentView from '@/components/StudentView';
 
-type ViewMode = 'teacher' | 'class' | 'rooms' | 'workload' | 'conflicts';
+type ViewMode = 'teacher' | 'class' | 'student' | 'rooms' | 'workload' | 'conflicts';
 
 const VIEW_TABS: { mode: ViewMode; icon: typeof User; label: string }[] = [
   { mode: 'teacher', icon: User, label: 'Opettajat' },
   { mode: 'class', icon: Users, label: 'Luokat' },
+  { mode: 'student', icon: GraduationCap, label: 'Oppilaat' },
   { mode: 'rooms', icon: DoorOpen, label: 'Tilat' },
   { mode: 'workload', icon: BarChart3, label: 'Kuormitus' },
   { mode: 'conflicts', icon: AlertTriangle, label: 'Tarkistukset' },
@@ -269,6 +272,7 @@ export default function Index() {
             )}
             <AddClassDialog />
             <AddTeacherDialog />
+            <AddStudentDialog />
             <RoomManagementDialog rooms={rooms} onSave={(r) => { setRooms(r); saveRooms.mutate(r); }} />
             <WilmaImportDialog />
             <SettingsDialog settings={settings} onSave={setSettings} />
@@ -313,6 +317,12 @@ export default function Index() {
           <div className="space-y-6" role="tabpanel" aria-label="Luokkien lukujärjestykset">
             <SubjectLegend />
             <ClassView entries={filteredEntries} subjects={subjects} classes={schoolClasses} rooms={rooms} timeSlots={timeSlots} teachers={teachers} onMoveEntry={handleMoveEntry} onEntryClick={setEditingEntryId} />
+          </div>
+        )}
+
+        {!isLoading && !isEmpty && viewMode === 'student' && (
+          <div className="space-y-6" role="tabpanel" aria-label="Oppilaskohtainen lukujärjestys">
+            <StudentView entries={filteredEntries} subjects={subjects} classes={schoolClasses} rooms={rooms} teachers={teachers} timeSlots={timeSlots} />
           </div>
         )}
 
