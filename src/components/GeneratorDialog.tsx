@@ -3,10 +3,9 @@ import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Wand2, CheckCircle2, Loader2, Download, Calendar, BookOpen } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Wand2, CheckCircle2, Loader2, Download, Calendar, BookOpen, Upload } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import type { Subject, Teacher, SchoolClass, Room, TimetableEntry } from '@/types/timetable';
 import {
@@ -19,6 +18,7 @@ import {
 } from '@/lib/timetableGenerator';
 import { downloadTimetableAsCSV } from '@/lib/timetableExport';
 import { generateOPSRequirements } from '@/lib/opsCurriculum';
+import { parseWilmaCSV, downloadWilmaImportTemplate } from '@/lib/wilmaImport';
 
 interface GeneratorDialogProps {
   classes: SchoolClass[];
@@ -29,8 +29,12 @@ interface GeneratorDialogProps {
   onGenerated: (entries: TimetableEntry[]) => void;
 }
 
-const createDefaultHomeRooms = (teachers: Teacher[], rooms: Room[]): TeacherHomeRoom[] =>
-  teachers.map(t => ({ teacherId: t.id, roomId: rooms[0]?.id || 'default-room' }));
+const createDefaultHomeRooms = (teachers: Teacher[], rooms: Room[]): TeacherHomeRoom[] => {
+  return teachers.map(t => ({
+    teacherId: t.id,
+    roomId: rooms[0]?.id || 'default-room',
+  }));
+};
 
 export default function GeneratorDialog({
   classes,
@@ -48,28 +52,18 @@ export default function GeneratorDialog({
   const [selectedResultIndex, setSelectedResultIndex] = useState(0);
   const [generating, setGenerating] = useState(false);
 
-  useMemo(() => new Map(subjects.map(s => [s.id, s])), [subjects]);
-  useMemo(() => new Map(classes.map(c => [c.id, c])), [classes]);
+  const subjectMap = useMemo(() => new Map(subjects.map(s => [s.id, s])), [subjects]);
+  const classMap = useMemo(() => new Map(classes.map(c => [c.id, c])), [classes]);
 
   const handleOpen = (isOpen: boolean) => {
     if (isOpen) {
+      setRequirements([]);
       setHomeRooms(createDefaultHomeRooms(teachers, rooms));
       setStep('config');
       setResults([]);
       setSelectedResultIndex(0);
     }
     setOpen(isOpen);
-  };
-
-  const handleFillOPS = () => {
-    const newRequirements: LessonRequirement[] = classes.flatMap(cls =>
-      generateOPSRequirements(cls, subjects)
-    );
-    setRequirements(newRequirements);
-    toast({
-      title: '✅ OPS-tuntijako täytetty',
-      description: 'Tunnit generoitiin OPS 2014 -perusteella luokka-asteittain.',
-    });
   };
 
   const updateReq = (classId: string, subjectId: string, hours: number) => {
@@ -85,22 +79,46 @@ export default function GeneratorDialog({
     });
   };
 
-  const updateHomeRoom = (teacherId: string, roomId: string) => {
-    setHomeRooms(prev => {
-      const idx = prev.findIndex(hr => hr.teacherId === teacherId);
-      if (idx >= 0) {
-        const copy = [...prev];
-        copy[idx] = { teacherId, roomId };
-        return copy;
-      }
-      return [...prev, { teacherId, roomId }];
-    });
+  const getReqHours = (classId: string, subjectId: string): number => {
+    return requirements.find(r => r.classId === classId && r.subjectId === subjectId)?.hoursPerWeek ?? 0;
   };
 
-  const getReqHours = (classId: string, subjectId: string): number =>
-    requirements.find(r => r.classId === classId && r.subjectId === subjectId)?.hoursPerWeek ?? 0;
-
   const totalRequired = requirements.reduce((sum, r) => sum + r.hoursPerWeek, 0);
+
+  // OPS-tuntijako
+  const handleFillOPS = () => {
+    let newRequirements: LessonRequirement[] = [];
+    classes.forEach(cls => {
+      const opsReqs = generateOPSRequirements(cls, subjects);
+      newRequirements = [...newRequirements, ...opsReqs];
+    });
+    setRequirements(newRequirements);
+    toast({ title: '✅ OPS-tuntijako täytetty', description: 'Tunnit generoitiin OPS 2014 -perusteella.' });
+  };
+
+  // Wilma-tuonti
+  const handleWilmaImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const csvText = event.target?.result as string;
+      const imported = parseWilmaCSV(csvText, classes, subjects);
+      
+      if (imported.length > 0) {
+        setRequirements(imported);
+        toast({
+          title: '✅ Wilma-tuonti onnistui',
+          description: `${imported.length} tuntivaatimusta tuotu.`,
+        });
+      } else {
+        toast({ title: 'Tuonti epäonnistui', description: 'Ei kelvollisia rivejä.', variant: 'destructive' });
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
 
   const handleGenerate = () => {
     setGenerating(true);
@@ -115,24 +133,19 @@ export default function GeneratorDialog({
         periodsPerDay,
         daysPerWeek: 5,
       };
-      const options: GenerationOptions = {
-        maxAttempts: 30,
-        softConstraintWeight: 0.75,
-        includeExplanations: true,
-      };
+
+      const options: GenerationOptions = { maxAttempts: 40, softConstraintWeight: 0.8, includeExplanations: true };
       const generatedResults = generateTimetable(input, options);
+
       setResults(generatedResults);
       setSelectedResultIndex(0);
       setStep('result');
       setGenerating(false);
+
       if (generatedResults.length === 0) {
-        toast({
-          title: 'Ei tuloksia',
-          description: 'Kokeile muuttaa asetuksia tai lisää tunteja.',
-          variant: 'destructive',
-        });
+        toast({ title: 'Ei tuloksia', description: 'Kokeile lisätä tuntivaatimuksia.', variant: 'destructive' });
       }
-    }, 300);
+    }, 400);
   };
 
   const selectedResult = results[selectedResultIndex] || null;
@@ -141,28 +154,15 @@ export default function GeneratorDialog({
     if (!selectedResult) return;
     onGenerated(selectedResult.entries);
     setOpen(false);
-    toast({
-      title: 'Lukujärjestys otettu käyttöön',
-      description: `${selectedResult.stats.totalPlaced}/${selectedResult.stats.totalRequired} tuntia sijoitettu onnistuneesti.`,
-    });
+    toast({ title: 'Lukujärjestys otettu käyttöön' });
   };
 
   const handleExport = () => {
     if (!selectedResult) return;
-    downloadTimetableAsCSV(
-      selectedResult,
-      {
-        classes,
-        teachers,
-        subjects,
-        rooms,
-        requirements,
-        teacherHomeRooms: homeRooms,
-        periodsPerDay,
-      } as GeneratorInput,
-      `lukujarjestys-kurre-vaihtoehto-${selectedResultIndex + 1}.csv`
-    );
-    toast({ title: 'CSV ladattu!', description: 'Valmis tuontiin Kurre/Primus/Wilmaan' });
+    downloadTimetableAsCSV(selectedResult, {
+      classes, teachers, subjects, rooms, requirements, teacherHomeRooms: homeRooms, periodsPerDay
+    } as any);
+    toast({ title: 'CSV ladattu', description: 'Valmis Kurre/Primus-tuontiin' });
   };
 
   return (
@@ -174,7 +174,7 @@ export default function GeneratorDialog({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Wand2 className="w-5 h-5 text-primary" />
@@ -183,23 +183,36 @@ export default function GeneratorDialog({
         </DialogHeader>
 
         {step === 'config' && (
-          <div className="space-y-8 py-2">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-medium flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Viikkotunnit per luokka ja aine
-                </h3>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleFillOPS}
-                  className="gap-2 bg-primary hover:bg-primary/90"
-                >
-                  <BookOpen className="w-4 h-4" />
-                  Täytä OPS-tuntijako automaattisesti
+          <div className="space-y-8 py-4">
+            {/* Tuontinapit */}
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={handleFillOPS} variant="outline" className="gap-2">
+                <BookOpen className="w-4 h-4" />
+                Täytä OPS-tuntijako automaattisesti
+              </Button>
+
+              <Button onClick={downloadWilmaImportTemplate} variant="outline" className="gap-2">
+                <Download className="w-4 h-4" />
+                Lataa esimerkki CSV
+              </Button>
+
+              <label className="cursor-pointer">
+                <Button variant="outline" className="gap-2" asChild>
+                  <span>
+                    <Upload className="w-4 h-4" />
+                    Tuo Wilmasta (CSV)
+                  </span>
                 </Button>
-              </div>
+                <input type="file" accept=".csv" onChange={handleWilmaImport} className="hidden" />
+              </label>
+            </div>
+
+            {/* Viikkotunnit-taulukko */}
+            <div>
+              <h3 className="font-medium mb-3 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Viikkotunnit per luokka ja aine
+              </h3>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -223,7 +236,7 @@ export default function GeneratorDialog({
                               max={10}
                               value={hours}
                               onChange={e => updateReq(cls.id, subj.id, parseInt(e.target.value) || 0)}
-                              className="w-20 text-center"
+                              className="w-20 text-center mx-auto"
                             />
                           </TableCell>
                         </TableRow>
@@ -234,45 +247,18 @@ export default function GeneratorDialog({
               </Table>
             </div>
 
-            <div>
-              <h3 className="font-medium mb-3">Opettajien kotiluokat</h3>
-              <div className="grid grid-cols-2 gap-3">
-                {teachers.map(teacher => (
-                  <div key={teacher.id} className="flex items-center gap-3">
-                    <span className="font-medium min-w-[120px]">
-                      {teacher.firstName} {teacher.lastName}
-                    </span>
-                    <Select onValueChange={roomId => updateHomeRoom(teacher.id, roomId)}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Valitse kotiluokka" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {rooms.map(room => (
-                          <SelectItem key={room.id} value={room.id}>
-                            {room.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setOpen(false)}>
-                Peruuta
-              </Button>
+              <Button variant="outline" onClick={() => setOpen(false)}>Peruuta</Button>
               <Button onClick={handleGenerate} disabled={generating || totalRequired === 0}>
                 {generating ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generoidaan 2–3 vaihtoehtoa...
+                    Generoidaan...
                   </>
                 ) : (
                   <>
                     <Wand2 className="w-4 h-4 mr-2" />
-                    Generoi vaihtoehdot
+                    Generoi 2–3 vaihtoehtoa
                   </>
                 )}
               </Button>
@@ -282,6 +268,7 @@ export default function GeneratorDialog({
 
         {step === 'result' && selectedResult && (
           <div className="space-y-6">
+            {/* Vaihtoehdot */}
             <div className="flex gap-2 overflow-x-auto pb-2">
               {results.map((res, idx) => (
                 <Button
@@ -291,13 +278,12 @@ export default function GeneratorDialog({
                   className="flex-1 min-w-[160px]"
                 >
                   Vaihtoehto {idx + 1}
-                  <Badge variant="secondary" className="ml-2">
-                    {res.stats.score} p
-                  </Badge>
+                  <Badge variant="secondary" className="ml-2">{res.stats.score} p</Badge>
                 </Button>
               ))}
             </div>
 
+            {/* Selitykset */}
             {selectedResult.explanations && (
               <div className="bg-muted/50 p-5 rounded-xl border">
                 <h4 className="font-semibold mb-3 flex items-center gap-2">
@@ -307,14 +293,14 @@ export default function GeneratorDialog({
                 <ul className="space-y-2 text-sm">
                   {selectedResult.explanations.map((exp, i) => (
                     <li key={i} className="flex gap-2">
-                      <span className="text-emerald-500">✓</span>
-                      {exp}
+                      <span className="text-emerald-500">✓</span> {exp}
                     </li>
                   ))}
                 </ul>
               </div>
             )}
 
+            {/* Tilastot */}
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-card p-4 rounded-xl text-center border">
                 <div className="text-3xl font-bold text-primary">{selectedResult.stats.totalPlaced}</div>
