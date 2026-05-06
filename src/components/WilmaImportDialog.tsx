@@ -8,9 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { parseWilmaCsv, inferCategory, type ParseResult } from '@/lib/wilmaImport';
+import { QK } from '@/hooks/useSchoolData';
 
 const FORMAT_LABELS: Record<ParseResult['format'], string> = {
   classes: 'Luokat',
@@ -25,6 +27,7 @@ interface Props {
 
 export default function WilmaImportDialog({ onImported }: Props) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [parsing, setParsing] = useState(false);
@@ -162,6 +165,13 @@ export default function WilmaImportDialog({ onImported }: Props) {
       toast.success(
         `Tuonti valmis: ${classCount} luokkaa, ${teacherCount} opettajaa, ${reqCount} tuntivaatimusta.`
       );
+      // Refresh all school data caches so views update immediately
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: QK.subjects }),
+        queryClient.invalidateQueries({ queryKey: QK.teachers }),
+        queryClient.invalidateQueries({ queryKey: QK.classes }),
+        queryClient.invalidateQueries({ queryKey: QK.requirements }),
+      ]);
       onImported?.();
       setOpen(false);
       reset();

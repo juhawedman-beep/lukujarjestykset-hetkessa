@@ -1,8 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { teachers, subjects, schoolClasses, rooms as initialRooms, timetableEntries as initialEntries } from '@/data/demoData';
 import { DEFAULT_SETTINGS, generateTimeSlots } from '@/lib/timetableSettings';
 import type { TimetableSettings } from '@/lib/timetableSettings';
-import type { TimetableEntry, AdditionalTeacher } from '@/types/timetable';
+import type { TimetableEntry, AdditionalTeacher, Room } from '@/types/timetable';
 import AdditionalTeachersDialog from '@/components/AdditionalTeachersDialog';
 import TimetableGrid from '@/components/TimetableGrid';
 import TeacherSelector from '@/components/TeacherSelector';
@@ -18,9 +17,11 @@ import PrintTimetable, { triggerPrint } from '@/components/PrintTimetable';
 import GeneratorDialog from '@/components/GeneratorDialog';
 import UserMenu from '@/components/UserMenu';
 import WilmaImportDialog from '@/components/WilmaImportDialog';
-import { GraduationCap, Calendar, User, Users, AlertTriangle, Printer, DoorOpen, BarChart3, Undo2, Redo2 } from 'lucide-react';
+import EmptyState from '@/components/EmptyState';
+import { GraduationCap, Calendar, User, Users, AlertTriangle, Printer, DoorOpen, BarChart3, Undo2, Redo2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
+import { useSubjects, useTeachers, useSchoolClasses, useRooms } from '@/hooks/useSchoolData';
 
 type ViewMode = 'teacher' | 'class' | 'rooms' | 'workload' | 'conflicts';
 
@@ -33,14 +34,34 @@ const VIEW_TABS: { mode: ViewMode; icon: typeof User; label: string }[] = [
 ];
 
 export default function Index() {
-  const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(teachers[0]?.id ?? null);
+  const { data: subjects = [], isLoading: loadingSubjects } = useSubjects();
+  const { data: teachers = [], isLoading: loadingTeachers } = useTeachers();
+  const { data: schoolClasses = [], isLoading: loadingClasses } = useSchoolClasses();
+  const { data: roomsFromDb = [], isLoading: loadingRooms } = useRooms();
+
+  const isLoading = loadingSubjects || loadingTeachers || loadingClasses || loadingRooms;
+  const isEmpty = !isLoading && teachers.length === 0 && schoolClasses.length === 0;
+
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
   const [settings, setSettings] = useState<TimetableSettings>(DEFAULT_SETTINGS);
   const [viewMode, setViewMode] = useState<ViewMode>('teacher');
-  const [rooms, setRooms] = useState(initialRooms);
-  const [entries, setEntries] = useState<TimetableEntry[]>(initialEntries);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [entries, setEntries] = useState<TimetableEntry[]>([]);
   const [isPrinting, setIsPrinting] = useState(false);
   const undoStack = useRef<TimetableEntry[][]>([]);
   const redoStack = useRef<TimetableEntry[][]>([]);
+
+  // Sync rooms from DB when loaded (until we wire room CRUD to DB too)
+  useEffect(() => {
+    setRooms(roomsFromDb);
+  }, [roomsFromDb]);
+
+  // Auto-select first teacher when list arrives
+  useEffect(() => {
+    if (!selectedTeacherId && teachers.length > 0) {
+      setSelectedTeacherId(teachers[0].id);
+    }
+  }, [teachers, selectedTeacherId]);
 
   const pushUndo = useCallback((snapshot: TimetableEntry[]) => {
     undoStack.current = [...undoStack.current, snapshot];
@@ -88,7 +109,7 @@ export default function Index() {
 
   const selectedTeacher = useMemo(
     () => teachers.find(t => t.id === selectedTeacherId),
-    [selectedTeacherId]
+    [teachers, selectedTeacherId]
   );
 
   const teacherEntries = useMemo(
@@ -124,7 +145,6 @@ export default function Index() {
     });
   }, [pushUndo]);
 
-  // Additional teachers dialog state
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
 
   const editingEntry = useMemo(
@@ -229,7 +249,15 @@ export default function Index() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6 no-print">
-        {viewMode === 'teacher' && (
+        {isLoading && (
+          <div className="flex items-center justify-center py-20 text-muted-foreground">
+            <Loader2 className="w-6 h-6 animate-spin mr-2" /> Ladataan tietoja…
+          </div>
+        )}
+
+        {!isLoading && isEmpty && <EmptyState />}
+
+        {!isLoading && !isEmpty && viewMode === 'teacher' && (
           <div className="flex gap-6">
             <aside className="w-64 shrink-0" aria-label="Opettajalista">
               <div className="sticky top-20 bg-card border border-border rounded-lg p-3 max-h-[calc(100vh-6rem)] overflow-y-auto">
@@ -248,26 +276,26 @@ export default function Index() {
           </div>
         )}
 
-        {viewMode === 'class' && (
+        {!isLoading && !isEmpty && viewMode === 'class' && (
           <div className="space-y-6" role="tabpanel" aria-label="Luokkien lukujärjestykset">
             <SubjectLegend />
             <ClassView entries={filteredEntries} subjects={subjects} classes={schoolClasses} rooms={rooms} timeSlots={timeSlots} teachers={teachers} onMoveEntry={handleMoveEntry} onEntryClick={setEditingEntryId} />
           </div>
         )}
 
-        {viewMode === 'rooms' && (
+        {!isLoading && !isEmpty && viewMode === 'rooms' && (
           <div className="space-y-6" role="tabpanel" aria-label="Tilojen varauskalenteri">
             <RoomView entries={filteredEntries} subjects={subjects} classes={schoolClasses} rooms={rooms} timeSlots={timeSlots} teachers={teachers} />
           </div>
         )}
 
-        {viewMode === 'workload' && (
+        {!isLoading && !isEmpty && viewMode === 'workload' && (
           <div className="space-y-6" role="tabpanel" aria-label="Opettajien kuormitusanalyysi">
             <WorkloadAnalysis entries={filteredEntries} teachers={teachers} subjects={subjects} periodsPerDay={settings.periodsPerDay} />
           </div>
         )}
 
-        {viewMode === 'conflicts' && (
+        {!isLoading && !isEmpty && viewMode === 'conflicts' && (
           <div className="space-y-6" role="tabpanel" aria-label="Päällekkäisyyksien tarkistus">
             <h2 className="text-xl font-semibold text-foreground">Päällekkäisyyksien tarkistus</h2>
             <p className="text-sm text-muted-foreground">Tarkistaa automaattisesti opettaja- ja tilapäällekkäisyydet.</p>
